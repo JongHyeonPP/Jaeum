@@ -70,6 +70,10 @@ class Parser:
             return self.file_read_statement()
         if self.match(TokenType.RETURN):
             return self.return_statement()
+        if self.match(TokenType.BREAK):
+            return self.break_statement()
+        if self.match(TokenType.CONTINUE):
+            return self.continue_statement()
         if self.match(TokenType.LBRACE):
             return self.block()
         return self.expression_statement()
@@ -178,6 +182,16 @@ class Parser:
             value = self.expression()
         self.consume(TokenType.SEMICOLON, "Expect ';' after return value.")
         return ast.Return(keyword, value)
+
+    def break_statement(self) -> ast.Break:
+        keyword = self.previous()
+        self.consume(TokenType.SEMICOLON, "Expect ';' after break.")
+        return ast.Break(keyword)
+
+    def continue_statement(self) -> ast.Continue:
+        keyword = self.previous()
+        self.consume(TokenType.SEMICOLON, "Expect ';' after continue.")
+        return ast.Continue(keyword)
 
     def expression_statement(self) -> ast.Expression:
         expr = self.expression()

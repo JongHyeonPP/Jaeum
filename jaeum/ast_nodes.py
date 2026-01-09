@@ -121,3 +121,11 @@ class While(Stmt):
 @dataclass
 class Block(Stmt):
     statements: List[Stmt]
+
+@dataclass
+class Break(Stmt):
+    keyword: Token
+
+@dataclass
+class Continue(Stmt):
+    keyword: Token

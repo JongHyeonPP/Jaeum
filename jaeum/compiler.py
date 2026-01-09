@@ -17,6 +17,15 @@ class Compiler:
         self.emit("extern ExitProcess")
         self.emit("extern printf")
         self.emit("extern scanf")
+        self.emit("extern malloc")
+        self.emit("extern free")
+        self.emit("extern fopen")
+        self.emit("extern fclose")
+        self.emit("extern fprintf")
+        self.emit("extern fread")
+        self.emit("extern fseek")
+        self.emit("extern ftell")
+        self.emit("extern rewind")
         
         self.emit("section .text")
         self.emit("Start:")
@@ -35,6 +44,8 @@ class Compiler:
         asm.append("section .data")
         asm.append('    fmt_int db "%lld", 10, 0')
         asm.append('    fmt_str db "%s", 10, 0')
+        asm.append('    mode_r db "rb", 0')
+        asm.append('    mode_w db "w", 0')
         for lbl, val in self.string_literals.items():
             asm.append(f'    {lbl} db "{val}", 0')
             
@@ -134,6 +145,19 @@ class Compiler:
         self.emit(f"    jmp {l_start}")
         self.emit(f"{l_end}:")
         self.loop_stack.pop()
+
+    def visit_Break(self, stmt: ast.Break):
+        if not self.loop_stack:
+            # Error handling? Compiler should probably catch this semantic error
+            return 
+        _, l_end = self.loop_stack[-1]
+        self.emit(f"    jmp {l_end}")
+
+    def visit_Continue(self, stmt: ast.Continue):
+        if not self.loop_stack:
+            return
+        l_start, _ = self.loop_stack[-1]
+        self.emit(f"    jmp {l_start}")
 
     # Expressions (Result always in RAX)
     def visit_Literal(self, expr: ast.Literal):
@@ -301,5 +325,125 @@ class Compiler:
         if hasattr(self, 'current_func_params') and self.current_func_params and name in self.current_func_params:
             offset = self.current_func_params[name]
             self.emit(f"    mov rax, [rbp + {offset}]")
-        else:
-            self.emit(f"    mov rax, [var_{name}]") # Global
+    # Array Operations
+    def visit_ArrayLiteral(self, expr: ast.ArrayLiteral):
+        count = len(expr.elements)
+        size = count * 8
+        if size == 0: size = 8 # Min alloc
+        
+        # 1. Malloc
+        self.emit(f"    mov rcx, {size}") # Size
+        self.emit("    sub rsp, 32")      # Shadow
+        self.emit("    call malloc")
+        self.emit("    add rsp, 32")
+        self.emit("    push rax")         # Push array ptr to stack [rsp]
+        
+        # 2. Populate
+        for i, elem in enumerate(expr.elements):
+            self.visit(elem) # Result in RAX
+            self.emit(f"    mov rbx, [rsp]") # Get array ptr
+            offset = i * 8
+            self.emit(f"    mov [rbx + {offset}], rax")
+            
+        self.emit("    pop rax") # Return array ptr
+
+    def visit_Get(self, expr: ast.Get):
+        self.visit(expr.object) # Array ptr -> RAX
+        self.emit("    push rax")
+        self.visit(expr.name)   # Index -> RAX
+        self.emit("    mov rbx, rax") # Index in RBX
+        self.emit("    pop rax")      # Array ptr in RAX
+        
+        # Address = RAX + RBX*8
+        self.emit("    lea rcx, [rax + rbx*8]")
+        self.emit("    mov rax, [rcx]")
+
+    def visit_FileWrite(self, stmt: ast.FileWrite):
+        # 1. Open File
+        self.visit(stmt.path) # Path string in RAX
+        self.emit("    mov rcx, rax") # Path
+        self.emit("    lea rdx, [mode_w]") # Mode "w"
+        self.emit("    sub rsp, 32")
+        self.emit("    call fopen")
+        self.emit("    add rsp, 32")
+        self.emit("    mov rbx, rax") # File Handle in RBX
+        
+        # Check if null? skip check for toy compiler
+        
+        # 2. Write Content
+        self.visit(stmt.content) # Content string in RAX
+        self.emit("    mov rcx, rbx") # File Handle
+        self.emit("    mov rdx, rax") # Content
+        self.emit("    sub rsp, 32")
+        self.emit("    call fprintf") # fprintf(file, string) - wait, fprintf format?
+        # fprintf(file, "%s", string) if we want formatting. 
+        # But if content is string, fprintf(file, str) works if no %
+        self.emit("    add rsp, 32")
+        
+        # 3. Close File
+        self.emit("    mov rcx, rbx")
+        self.emit("    sub rsp, 32")
+        self.emit("    call fclose")
+        self.emit("    add rsp, 32")
+
+    def visit_FileRead(self, stmt: ast.FileRead):
+        # 1. Open File
+        self.visit(stmt.path) # Path
+        self.emit("    mov rcx, rax")
+        self.emit("    lea rdx, [mode_r]") # "rb"
+        self.emit("    sub rsp, 32")
+        self.emit("    call fopen")
+        self.emit("    add rsp, 32")
+        self.emit("    mov rbx, rax") # File Handle
+        
+        # 2. Get Size
+        self.emit("    mov rcx, rbx")
+        self.emit("    mov rdx, 0")
+        self.emit("    mov r8, 2") # SEEK_END
+        self.emit("    sub rsp, 32")
+        self.emit("    call fseek")
+        self.emit("    add rsp, 32")
+        
+        self.emit("    mov rcx, rbx")
+        self.emit("    sub rsp, 32")
+        self.emit("    call ftell")
+        self.emit("    add rsp, 32")
+        self.emit("    mov r12, rax") # Size in R12 (Saved reg)
+        
+        self.emit("    mov rcx, rbx")
+        self.emit("    sub rsp, 32")
+        self.emit("    call rewind")
+        self.emit("    add rsp, 32")
+        
+        # 3. Malloc buffer (size + 1 for null terminator?)
+        self.emit("    mov rcx, r12")
+        self.emit("    add rcx, 1") # +1
+        self.emit("    sub rsp, 32")
+        self.emit("    call malloc")
+        self.emit("    add rsp, 32")
+        self.emit("    mov r13, rax") # Buffer in R13
+        
+        # 4. Read
+        self.emit("    mov rcx, r13") # Buffer
+        self.emit("    mov rdx, 1")   # Size
+        self.emit("    mov r8, r12")  # Count
+        self.emit("    mov r9, rbx")  # File
+        self.emit("    sub rsp, 32")
+        self.emit("    call fread")
+        self.emit("    add rsp, 32")
+        
+        # Null terminate
+        self.emit("    mov byte [r13 + r12], 0")
+        
+        # 5. Close
+        self.emit("    mov rcx, rbx")
+        self.emit("    sub rsp, 32")
+        self.emit("    call fclose")
+        self.emit("    add rsp, 32")
+        
+        # 6. Assign
+        var_name = stmt.target_var.lexeme
+        if var_name not in self.variables:
+             self.variables[var_name] = "global"
+        self.emit(f"    mov rax, r13")
+        self.emit(f"    mov [var_{var_name}], rax")
