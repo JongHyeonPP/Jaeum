@@ -222,6 +222,68 @@ class Interpreter:
     def visit_Variable(self, expr: ast.Variable):
         return self.environment.get(expr.name)
 
+    def visit_ArrayLiteral(self, expr: ast.ArrayLiteral):
+        return [self.evaluate(element) for element in expr.elements]
+
+    def visit_Get(self, expr: ast.Get):
+        object = self.evaluate(expr.object)
+        if not isinstance(object, list):
+            raise RuntimeError(expr.bracket, "Only arrays have elements.")
+        
+        index = self.evaluate(expr.name)
+        if not isinstance(index, int):
+            raise RuntimeError(expr.bracket, "Index must be an integer.")
+            
+        try:
+            return object[index]
+        except IndexError:
+            raise RuntimeError(expr.bracket, "Array index out of bounds.")
+
+    def visit_Set(self, expr: ast.Set):
+        object = self.evaluate(expr.object)
+        if not isinstance(object, list):
+            raise RuntimeError(expr.bracket, "Only arrays have elements.")
+            
+        index = self.evaluate(expr.name)
+        if not isinstance(index, int):
+            raise RuntimeError(expr.bracket, "Index must be an integer.")
+            
+        value = self.evaluate(expr.value)
+        try:
+            object[index] = value
+            return value
+        except IndexError:
+            raise RuntimeError(expr.bracket, "Array index out of bounds.")
+
+    def visit_FileWrite(self, stmt: ast.FileWrite):
+        path = self.evaluate(stmt.path)
+        content = self.evaluate(stmt.content)
+        
+        path_str = self.stringify(path)
+        content_str = self.stringify(content)
+        
+        try:
+            with open(path_str, "w", encoding="utf-8") as f:
+                f.write(content_str)
+        except Exception as e:
+            # Report runtime error but don't crash interpreter if possible? 
+            # Or crash? Let's print error
+             print(f"Error writing file '{path_str}': {e}", file=sys.stderr)
+
+    def visit_FileRead(self, stmt: ast.FileRead):
+        path = self.evaluate(stmt.path)
+        path_str = self.stringify(path)
+        
+        content = ""
+        try:
+            with open(path_str, "r", encoding="utf-8") as f:
+                content = f.read()
+        except Exception as e:
+             print(f"Error reading file '{path_str}': {e}", file=sys.stderr)
+             content = None # Assign Null on error
+             
+        self.environment.assign(stmt.target_var, content)
+
     # Helpers
     def check_number_operand(self, operator: Token, operand: Any):
         if isinstance(operand, (int, float)): return
@@ -253,6 +315,8 @@ class Interpreter:
             if text.endswith(".0"):
                 text = text[:-2]
             return text
+        if isinstance(object, list):
+            return "[" + ", ".join([self.stringify(element) for element in object]) + "]"
         return str(object)
 
 class JaeumCallable:

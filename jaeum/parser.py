@@ -64,6 +64,10 @@ class Parser:
             return self.print_statement()
         if self.match(TokenType.INPUT):
             return self.input_statement()
+        if self.match(TokenType.FILE_WRITE):
+            return self.file_write_statement()
+        if self.match(TokenType.FILE_READ):
+            return self.file_read_statement()
         if self.match(TokenType.RETURN):
             return self.return_statement()
         if self.match(TokenType.LBRACE):
@@ -134,7 +138,7 @@ class Parser:
         return body
 
     def print_statement(self) -> ast.Print:
-        self.consume(TokenType.LPAREN, "Expect '(' after 'ㅍㅌ'.")
+        self.consume(TokenType.LPAREN, "Expect '(' after 'ㅊㄹ'.")
         value = self.expression()
         self.consume(TokenType.RPAREN, "Expect ')' after value.")
         self.consume(TokenType.SEMICOLON, "Expect ';' after value.")
@@ -146,6 +150,26 @@ class Parser:
         self.consume(TokenType.RPAREN, "Expect ')' after variable name.")
         self.consume(TokenType.SEMICOLON, "Expect ';' after input statement.")
         return ast.Input(name)
+
+    def file_write_statement(self) -> ast.FileWrite:
+        self.consume(TokenType.LPAREN, "Expect '(' after 'ㅍㅇㅊㄹ'.")
+        path = self.expression()
+        self.consume(TokenType.COMMA, "Expect ',' between path and content.")
+        content = self.expression()
+        self.consume(TokenType.RPAREN, "Expect ')' after content.")
+        self.consume(TokenType.SEMICOLON, "Expect ';' after file write.")
+        # ㅍㅇㅊㄹ(경로, 내용);
+        return ast.FileWrite(path, content)
+
+    def file_read_statement(self) -> ast.FileRead:
+        self.consume(TokenType.LPAREN, "Expect '(' after 'ㅍㅇㅇㄹ'.")
+        target = self.consume(TokenType.IDENTIFIER, "Expect variable name to store file content.")
+        self.consume(TokenType.COMMA, "Expect ',' between variable and path.")
+        path = self.expression()
+        self.consume(TokenType.RPAREN, "Expect ')' after path.")
+        self.consume(TokenType.SEMICOLON, "Expect ';' after file read.")
+        # ㅍㅇㅇㄹ(변수, 경로);
+        return ast.FileRead(path, target)
 
     def return_statement(self) -> ast.Return:
         keyword = self.previous()
@@ -179,6 +203,8 @@ class Parser:
             if isinstance(expr, ast.Variable):
                 name = expr.name
                 return ast.Assign(name, value)
+            elif isinstance(expr, ast.Get):
+                return ast.Set(expr.object, expr.name, value, expr.bracket)
             self.error(equals, "Invalid assignment target.")
         return expr
 
@@ -242,9 +268,16 @@ class Parser:
         while True:
             if self.match(TokenType.LPAREN):
                 expr = self.finish_call(expr)
+            elif self.match(TokenType.LBRACKET):
+                expr = self.finish_index(expr)
             else:
                 break
         return expr
+
+    def finish_index(self, object: ast.Expr) -> ast.Expr:
+        name = self.expression()
+        bracket = self.consume(TokenType.RBRACKET, "Expect ']' after index.")
+        return ast.Get(object, name, bracket)
 
     def finish_call(self, callee: ast.Expr) -> ast.Expr:
         arguments = []
@@ -277,6 +310,16 @@ class Parser:
             self.consume(TokenType.RPAREN, "Expect ')' after expression.")
             return ast.Grouping(expr)
             
+        if self.match(TokenType.LBRACKET):
+            elements = []
+            if not self.check(TokenType.RBRACKET):
+                while True:
+                    elements.append(self.expression())
+                    if not self.match(TokenType.COMMA):
+                        break
+            bracket = self.consume(TokenType.RBRACKET, "Expect ']' after array elements.")
+            return ast.ArrayLiteral(elements, bracket)
+
         raise self.error(self.peek(), "Expect expression.")
 
     # Helpers

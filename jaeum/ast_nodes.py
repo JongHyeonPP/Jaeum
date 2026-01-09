@@ -47,9 +47,27 @@ class Logical(Expr):
 @dataclass
 class Call(Expr):
     callee: Expr
-    paren: Token # For error reporting location
+    paren: Token 
     arguments: List[Expr]
 
+@dataclass
+class ArrayLiteral(Expr):
+    elements: List[Expr]
+    bracket: Token 
+
+@dataclass
+class Get(Expr):
+    object: Expr
+    name: Expr # Can be index expression
+    bracket: Token
+
+@dataclass
+class Set(Expr):
+    object: Expr
+    name: Expr
+    value: Expr
+    bracket: Token
+    
 # Statements
 @dataclass
 class Expression(Stmt):
@@ -64,12 +82,26 @@ class Function(Stmt):
 @dataclass
 class If(Stmt):
     condition: Expr
-    then_branch: 'Block' # Jaeum uses blocks strictly
+    then_branch: 'Block' 
     else_branch: Optional['Block']
 
 @dataclass
 class Print(Stmt):
     expression: Expr
+
+@dataclass
+class Input(Stmt):
+    name: Token
+
+@dataclass
+class FileWrite(Stmt):
+    path: Expr
+    content: Expr
+
+@dataclass
+class FileRead(Stmt):
+    path: Expr
+    target_var: Token
 
 @dataclass
 class Return(Stmt):
@@ -79,7 +111,7 @@ class Return(Stmt):
 @dataclass
 class Var(Stmt):
     name: Token
-    initializer: Expr # Null/Undefined if not present
+    initializer: Expr
 
 @dataclass
 class While(Stmt):
@@ -89,7 +121,3 @@ class While(Stmt):
 @dataclass
 class Block(Stmt):
     statements: List[Stmt]
-
-@dataclass
-class Input(Stmt):
-    name: Token

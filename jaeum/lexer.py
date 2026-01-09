@@ -29,9 +29,11 @@ class Lexer:
         # Single-character tokens
         if c == '(': self.add_token(TokenType.LPAREN); return
         if c == ')': self.add_token(TokenType.RPAREN); return
-        if c == '{': self.add_token(TokenType.LBRACE); return
-        if c == '}': self.add_token(TokenType.RBRACE); return
-        if c == ',': self.add_token(TokenType.COMMA); return
+        if c == '{': return self.add_token(TokenType.LBRACE)
+        if c == '}': return self.add_token(TokenType.RBRACE)
+        if c == '[': return self.add_token(TokenType.LBRACKET)
+        if c == ']': return self.add_token(TokenType.RBRACKET)
+        if c == ',': return self.add_token(TokenType.COMMA)
         if c == ';': self.add_token(TokenType.SEMICOLON); return
         if c == '+': self.add_token(TokenType.PLUS); return
         if c == '-': self.add_token(TokenType.MINUS); return

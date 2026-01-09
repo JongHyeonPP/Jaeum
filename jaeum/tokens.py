@@ -21,8 +21,10 @@ class TokenType(Enum):
     CONTINUE = auto() # ㅋ
     FUNC = auto()     # ㅎㅅ (Function)
     RETURN = auto()   # ㄹㅌ (Return)
-    PRINT = auto()    # ㅍㅌ (Print)
+    PRINT = auto()    # ㅊㄹ (Print)
     INPUT = auto()    # ㅇㄹ (Input)
+    FILE_WRITE = auto() # ㅍㅇㅊㄹ (File Write)
+    FILE_READ = auto()  # ㅍㅇㅇㄹ (File Read)
     
     # Constants
     TRUE = auto()     # ㅇ (Yes)
@@ -53,6 +55,8 @@ class TokenType(Enum):
     RPAREN = auto()   # )
     LBRACE = auto()   # {
     RBRACE = auto()   # }
+    LBRACKET = auto() # [
+    RBRACKET = auto() # ]
     SEMICOLON = auto() # ;
     COMMA = auto()    # ,
 
@@ -74,11 +78,13 @@ KEYWORDS = {
     "ㅂㅂ1": TokenType.WHILE,
     "ㅂㅂ2": TokenType.FOR,
     "ㅃ": TokenType.BREAK,
-    "ㅋ": TokenType.CONTINUE,
+    "ㄹㄹ": TokenType.CONTINUE,
     "ㅎㅅ": TokenType.FUNC,
     "ㄹㅌ": TokenType.RETURN,
-    "ㅍㅌ": TokenType.PRINT,
+    "ㅊㄹ": TokenType.PRINT,
     "ㅇㄹ": TokenType.INPUT,
+    "ㅍㅇㅊㄹ": TokenType.FILE_WRITE,
+    "ㅍㅇㅇㄹ": TokenType.FILE_READ,
     "ㅇ": TokenType.TRUE,
     "ㄴ": TokenType.FALSE,
     "ㄴㄴㄴ": TokenType.NULL,
