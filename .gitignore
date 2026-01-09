@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+dist/
+build/
+*.spec
+*.exe
+*.obj
+*.asm
+tools/
+!tools/.gitkeep
