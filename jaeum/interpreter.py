@@ -138,12 +138,6 @@ class Interpreter:
     def visit_Continue(self, stmt: ast.Continue):
         raise Continue()
 
-    def visit_Var(self, stmt: ast.Var):
-        value = UNDEFINED
-        if stmt.initializer:
-            value = self.evaluate(stmt.initializer)
-        self.environment.define(stmt.name.lexeme, value)
-
     def visit_While(self, stmt: ast.While):
         while self.is_truthy(self.evaluate(stmt.condition)):
             try:
@@ -156,7 +150,11 @@ class Interpreter:
     # Expressions
     def visit_Assign(self, expr: ast.Assign):
         value = self.evaluate(expr.value)
-        self.environment.assign(expr.name, value)
+        try:
+            self.environment.assign(expr.name, value)
+        except RuntimeError:
+            # If not defined, define in current scope (Optional declaration)
+            self.environment.define(expr.name.lexeme, value)
         return value
 
     def visit_Binary(self, expr: ast.Binary):

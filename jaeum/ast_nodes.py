@@ -114,11 +114,6 @@ class Return(Stmt):
     value: Expr
 
 @dataclass
-class Var(Stmt):
-    name: Token
-    initializer: Expr
-
-@dataclass
 class While(Stmt):
     condition: Expr
     body: 'Block'

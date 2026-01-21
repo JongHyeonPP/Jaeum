@@ -23,8 +23,6 @@ class Parser:
         try:
             if self.match(TokenType.FUNC):
                 return self.function("function")
-            if self.match(TokenType.VAR):
-                return self.var_declaration()
             return self.statement()
         except ParseError:
             self.synchronize()
@@ -43,14 +41,6 @@ class Parser:
         self.consume(TokenType.LBRACE, f"Expect '{{' before {kind} body.")
         body = self.block()
         return ast.Function(name, parameters, body.statements)
-
-    def var_declaration(self) -> ast.Var:
-        name = self.consume(TokenType.IDENTIFIER, "Expect variable name.")
-        initializer = None
-        if self.match(TokenType.EQUAL):
-            initializer = self.expression()
-        self.consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.")
-        return ast.Var(name, initializer)
 
     # Statements
     def statement(self) -> ast.Stmt:
@@ -111,8 +101,6 @@ class Parser:
         initializer = None
         if self.match(TokenType.SEMICOLON):
             initializer = None
-        elif self.match(TokenType.VAR):
-            initializer = self.var_declaration()
         else:
             initializer = self.expression_statement()
         
@@ -212,7 +200,9 @@ class Parser:
     def block(self) -> ast.Block:
         statements = []
         while not self.check(TokenType.RBRACE) and not self.is_at_end():
-            statements.append(self.declaration())
+            decl = self.declaration()
+            if decl:
+                statements.append(decl)
         self.consume(TokenType.RBRACE, "Expect '}' after block.")
         return ast.Block(statements)
 
@@ -385,7 +375,7 @@ class Parser:
         while not self.is_at_end():
             if self.previous().type == TokenType.SEMICOLON: return
             if self.peek().type in [
-                TokenType.FUNC, TokenType.VAR, TokenType.FOR,
+                TokenType.FUNC, TokenType.FOR,
                 TokenType.IF, TokenType.WHILE, TokenType.PRINT,
                 TokenType.RETURN, TokenType.INPUT
             ]:

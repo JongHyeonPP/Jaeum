@@ -1,57 +1,57 @@
 // Jaeumeo Compiler in Jaeumeo (Bootstrapping) - Optimized File I/O + Escape
 
 // Constants (Token Types)
-ㅄ T_EOF = 0;
-ㅄ T_ID = 1;
-ㅄ T_NUM = 2;
-ㅄ T_STR = 3;
-ㅄ T_VAR = 4; // ㅄ
-ㅄ T_FUNC = 5; // ㅎㅅ
-ㅄ T_PRINT = 6; // ㅊㄹ
-ㅄ T_LPAREN = 7; // (
-ㅄ T_RPAREN = 8; // )
-ㅄ T_LBRACE = 9; // {
-ㅄ T_RBRACE = 10; // }
-ㅄ T_SEMI = 11; // ;
-ㅄ T_EQ = 12; // =
-ㅄ T_PLUS = 13; // +
-ㅄ T_MINUS = 14; // -
-ㅄ T_STAR = 15; // *
-ㅄ T_SLASH = 16; // /
-ㅄ T_COMMA = 17; // ,
-ㅄ T_LBRACKET = 18; // [
-ㅄ T_RBRACKET = 19; // ]
-ㅄ T_RETURN = 20; // ㄹㅌ
-ㅄ T_IF = 21; // ㄹㅇ
-ㅄ T_WHILE = 22; // ㅂㅂ1
-ㅄ T_LT = 23; // <
-ㅄ T_GT = 24; // >
-ㅄ T_EQEQ = 25; // ==
-ㅄ T_BANGEQ = 26; // !=
-ㅄ T_LTEQ = 27; // <=
-ㅄ T_GTEQ = 28; // >=
-ㅄ T_FREAD = 29; // ㅍㅇㅇㄹ
-ㅄ T_FWRITE = 30; // ㅍㅇㅊㄹ
-ㅄ T_FAPPEND = 31; // ㅍㅇㅊㄱ
+T_EOF = 0;
+T_ID = 1;
+T_NUM = 2;
+T_STR = 3;
+T_VAR = 4; // ㅄ
+T_FUNC = 5; // ㅎㅅ
+T_PRINT = 6; // ㅊㄹ
+T_LPAREN = 7; // (
+T_RPAREN = 8; // )
+T_LBRACE = 9; // {
+T_RBRACE = 10; // }
+T_SEMI = 11; // ;
+T_EQ = 12; // =
+T_PLUS = 13; // +
+T_MINUS = 14; // -
+T_STAR = 15; // *
+T_SLASH = 16; // /
+T_COMMA = 17; // ,
+T_LBRACKET = 18; // [
+T_RBRACKET = 19; // ]
+T_RETURN = 20; // ㄹㅌ
+T_IF = 21; // ㄹㅇ
+T_WHILE = 22; // ㅂㅂ1
+T_LT = 23; // <
+T_GT = 24; // >
+T_EQEQ = 25; // ==
+T_BANGEQ = 26; // !=
+T_LTEQ = 27; // <=
+T_GTEQ = 28; // >=
+T_FREAD = 29; // ㅍㅇㅇㄹ
+T_FWRITE = 30; // ㅍㅇㅊㄹ
+T_FAPPEND = 31; // ㅍㅇㅊㄱ
 
 // Global Variables
-ㅄ 소스 = "";
-ㅄ 토큰들 = 준비(30000); // Increased buffer
-ㅄ 토큰수 = 0;
-ㅄ 현재토큰 = 0;
+소스 = "";
+토큰들 = 준비(30000); // Increased buffer
+토큰수 = 0;
+현재토큰 = 0;
 
-ㅄ 전역변수목록 = 준비(1000);
-ㅄ 전역변수개수 = 0;
+전역변수목록 = 준비(1000);
+전역변수개수 = 0;
 
 // Symbol Table
-ㅄ 지역변수목록 = 준비(100);
-ㅄ 지역변수오프셋 = 준비(100);
-ㅄ 지역변수개수 = 0;
-ㅄ 파라미터목록 = 준비(20);
-ㅄ 파라미터개수 = 0;
-ㅄ 현재오프셋 = 0;
+지역변수목록 = 준비(100);
+지역변수오프셋 = 준비(100);
+지역변수개수 = 0;
+파라미터목록 = 준비(20);
+파라미터개수 = 0;
+현재오프셋 = 0;
 
-ㅄ 라벨번호 = 0;
+라벨번호 = 0;
 ㅎㅅ 새라벨() {
     라벨번호 = 라벨번호 + 1;
     ㄹㅌ 문자연결("L", 문자열변환(라벨번호));
@@ -59,7 +59,7 @@
 
 // Helper: Append Token
 ㅎㅅ 토큰추가(type, lexeme, literal) {
-    ㅄ t = 준비(3);
+    t = 준비(3);
     t[0] = type;
     t[1] = lexeme;
     t[2] = literal;
@@ -82,8 +82,8 @@
 }
 
 ㅎㅅ 자르기(s, start, len) {
-    ㅄ res = "";
-    ㅄ i = 0;
+    res = "";
+    i = 0;
     ㅂㅂ1 (i < len) {
         res = 문자연결(res, 문자(문자읽기(s, start + i)));
         i = i + 1;
@@ -92,11 +92,11 @@
 }
 
 ㅎㅅ 문자열_정수로(s) {
-    ㅄ len = 길이(s);
-    ㅄ res = 0;
-    ㅄ i = 0;
+    len = 길이(s);
+    res = 0;
+    i = 0;
     ㅂㅂ1 (i < len) {
-       ㅄ c = 문자읽기(s, i);
+       c = 문자읽기(s, i);
        res = res * 10 + (c - 48);
        i = i + 1;
     }
@@ -105,7 +105,7 @@
 
 // Symbol Table
 ㅎㅅ 전역변수등록(name) {
-    ㅄ i = 0;
+    i = 0;
     ㅂㅂ1 (i < 전역변수개수) {
         ㄹㅇ (전역변수목록[i] == name) { ㄹㅌ 0; }
         i = i + 1;
@@ -115,7 +115,7 @@
 }
 
 ㅎㅅ 지역변수등록(name) {
-    ㅄ i = 0;
+    i = 0;
     ㅂㅂ1 (i < 지역변수개수) {
         ㄹㅇ (지역변수목록[i] == name) { ㄹㅌ 0; }
         i = i + 1;
@@ -132,11 +132,30 @@
     지역변수개수 = 지역변수개수 + 1;
 }
 
+ㅎㅅ 변수존재확인(name) {
+    i = 0;
+    ㅂㅂ1 (i < 지역변수개수) {
+        ㄹㅇ (지역변수목록[i] == name) { ㄹㅌ 1; }
+        i = i + 1;
+    }
+    i = 0;
+    ㅂㅂ1 (i < 파라미터개수) {
+        ㄹㅇ (파라미터목록[i] == name) { ㄹㅌ 1; }
+        i = i + 1;
+    }
+    i = 0;
+    ㅂㅂ1 (i < 전역변수개수) {
+        ㄹㅇ (전역변수목록[i] == name) { ㄹㅌ 1; }
+        i = i + 1;
+    }
+    ㄹㅌ 0;
+}
+
 ㅎㅅ 변수위치찾기(name) {
-    ㅄ i = 0;
+    i = 0;
     ㅂㅂ1 (i < 지역변수개수) {
         ㄹㅇ (지역변수목록[i] == name) {
-            ㅄ off = 지역변수오프셋[i];
+            off = 지역변수오프셋[i];
             ㄹㅌ 문자연결(문자연결("[rbp - ", 문자열변환(off)), "]");
         }
         i = i + 1;
@@ -144,7 +163,7 @@
     i = 0;
     ㅂㅂ1 (i < 파라미터개수) {
         ㄹㅇ (파라미터목록[i] == name) {
-            ㅄ off = 16 + (i * 8);
+            off = 16 + (i * 8);
             ㄹㅌ 문자연결(문자연결("[rbp + ", 문자열변환(off)), "]");
         }
         i = i + 1;
@@ -154,11 +173,11 @@
 
 // Lexer
 ㅎㅅ 렉서() {
-    ㅄ i = 0;
-    ㅄ len = 길이(소스);
+    i = 0;
+    len = 길이(소스);
 
     ㅂㅂ1 (i < len) {
-        ㅄ c = 문자읽기(소스, i);
+        c = 문자읽기(소스, i);
 
         ㄹㅇ (c == 32) { i = i + 1; ㄹㄹ; }
         ㄹㅇ (c == 10) { i = i + 1; ㄹㄹ; }
@@ -229,9 +248,9 @@
         // String with escape support
         ㄹㅇ (c == 34) {
             i = i + 1;
-            ㅄ res = "";
+            res = "";
             ㅂㅂ1 (문자읽기(소스, i) != 34) {
-                ㅄ cc = 문자읽기(소스, i);
+                cc = 문자읽기(소스, i);
                 ㄹㅇ (cc == 92) { // Backslash
                     i = i + 1;
                     cc = 문자읽기(소스, i);
@@ -252,17 +271,17 @@
         }
 
         ㄹㅇ (숫자냐(c)) {
-            ㅄ start = i;
+            start = i;
             ㅂㅂ1 (숫자냐(문자읽기(소스, i))) {
                 i = i + 1;
             }
-            ㅄ num_str = 자르기(소스, start, i - start);
-            ㅄ val = 문자열_정수로(num_str);
+            num_str = 자르기(소스, start, i - start);
+            val = 문자열_정수로(num_str);
             토큰추가(T_NUM, num_str, val);
             ㄹㄹ;
         }
 
-        ㅄ start = i;
+        start = i;
         ㅂㅂ1 (문자읽기(소스, i) != 32) {
              c = 문자읽기(소스, i);
              ㄹㅇ (c == 40) { ㅃ; }
@@ -286,10 +305,9 @@
              ㄹㅇ (i >= len) { ㅃ; }
         }
 
-        ㅄ txt = 자르기(소스, start, i - start);
+        txt = 자르기(소스, start, i - start);
 
-        ㅄ type = T_ID;
-        ㄹㅇ (txt == "ㅄ") { type = T_VAR; }
+        type = T_ID;
         ㄹㅇ (txt == "ㅎㅅ") { type = T_FUNC; }
         ㄹㅇ (txt == "ㅊㄹ") { type = T_PRINT; }
         ㄹㅇ (txt == "ㄹㅌ") { type = T_RETURN; }
@@ -305,7 +323,7 @@
 }
 
 // Code Generator - File based
-ㅄ 모드_메인 = 0; // 0: output.asm, 1: main.tmp
+모드_메인 = 0; // 0: output.asm, 1: main.tmp
 
 ㅎㅅ 파일쓰기(file, line) {
     ㅍㅇㅊㄱ(file, line);
@@ -328,7 +346,7 @@
 
 // Parser
 ㅎㅅ 매치(type) {
-    ㅄ t = 토큰들[현재토큰];
+    t = 토큰들[현재토큰];
     ㄹㅇ (t[0] == type) {
         현재토큰 = 현재토큰 + 1;
         ㄹㅌ 1;
@@ -350,6 +368,8 @@
 }
 
 ㅎㅅ 픽() {
+    // Check bounds?
+    ㄹㅇ (현재토큰 >= 토큰수) { ㄹㅌ T_EOF; }
     ㄹㅌ 토큰들[현재토큰][0];
 }
 
@@ -380,7 +400,7 @@
     방출_TEXT("Start:");
     방출_TEXT("    sub rsp, 40");
 
-    ㅄ l_main = 새라벨();
+    l_main = 새라벨();
     방출_TEXT(문자연결("    jmp ", l_main));
 
     // Parse
@@ -399,7 +419,7 @@
     방출_TEXT(문자연결(l_main, ":"));
 
     // Append main.tmp
-    ㅄ main_content = "";
+    main_content = "";
     ㅍㅇㅇㄹ(main_content, "main.tmp");
     ㄹㅇ (main_content != "ㄴㄴㄴ") { // Check if valid
          ㅍㅇㅊㄱ("output.asm", main_content);
@@ -418,7 +438,7 @@
     방출_DATA("    mode_a db \"a\", 0");
 
     // Append Data
-    ㅄ data_content = "";
+    data_content = "";
     ㅍㅇㅇㄹ(data_content, "data.tmp");
     ㄹㅇ (data_content != "ㄴㄴㄴ") {
         ㅍㅇㅊㄱ("output.asm", data_content);
@@ -426,14 +446,14 @@
 
     // BSS
     방출_BSS("section .bss");
-    ㅄ i = 0;
+    i = 0;
     ㅂㅂ1 (i < 전역변수개수) {
         방출_BSS(문자연결(문자연결("    var_", 전역변수목록[i]), " resq 1"));
         i = i + 1;
     }
 
     // Append BSS
-    ㅄ bss_content = "";
+    bss_content = "";
     ㅍㅇㅇㄹ(bss_content, "bss.tmp");
     ㄹㅇ (bss_content != "ㄴㄴㄴ") {
         ㅍㅇㅊㄱ("output.asm", bss_content);
@@ -442,7 +462,7 @@
 
 ㅎㅅ 함수정의() {
     소비(T_FUNC);
-    ㅄ name = 토큰들[현재토큰][1];
+    name = 토큰들[현재토큰][1];
     소비(T_ID);
     소비(T_LPAREN);
 
@@ -452,7 +472,7 @@
 
     ㄹㅇ (픽() != T_RPAREN) {
         ㅂㅂ1 (1) {
-            ㅄ pname = 토큰들[현재토큰][1];
+            pname = 토큰들[현재토큰][1];
             소비(T_ID);
             파라미터목록[파라미터개수] = pname;
             파라미터개수 = 파라미터개수 + 1;
@@ -489,27 +509,7 @@
 }
 
 ㅎㅅ 문장() {
-    ㅄ t = 픽();
-
-    ㄹㅇ (t == T_VAR) {
-        소비(T_VAR);
-        ㅄ name = 토큰들[현재토큰][1];
-        소비(T_ID);
-
-        ㄹㅇ (모드_메인 == 1) {
-            전역변수등록(name);
-        } ㄴㄴ {
-            지역변수등록(name);
-        }
-
-        소비(T_EQ);
-        표현식();
-        소비(T_SEMI);
-
-        ㅄ loc = 변수위치찾기(name);
-        방출_TEXT(문자연결(문자연결("    mov ", loc), ", rax"));
-        ㄹㅌ 0;
-    }
+    t = 픽();
 
     ㄹㅇ (t == T_PRINT) {
         소비(T_PRINT);
@@ -530,8 +530,8 @@
         표현식();
         소비(T_RPAREN);
 
-        ㅄ l_else = 새라벨();
-        ㅄ l_end = 새라벨();
+        l_else = 새라벨();
+        l_end = 새라벨();
 
         방출_TEXT("    cmp rax, 0");
         방출_TEXT(문자연결("    je ", l_else));
@@ -548,8 +548,8 @@
         소비(T_WHILE);
         소비(T_LPAREN);
 
-        ㅄ l_start = 새라벨();
-        ㅄ l_end = 새라벨();
+        l_start = 새라벨();
+        l_end = 새라벨();
 
         방출_TEXT(문자연결(l_start, ":"));
         표현식();
@@ -578,7 +578,7 @@
     ㄹㅇ (t == T_FREAD) {
         소비(T_FREAD);
         소비(T_LPAREN);
-        ㅄ name = 토큰들[현재토큰][1];
+        name = 토큰들[현재토큰][1];
         소비(T_ID);
         소비(T_COMMA);
         표현식(); // Path
@@ -635,7 +635,7 @@
 
         // Assign r13 to var
         방출_TEXT("    mov rax, r13");
-        ㅄ loc = 변수위치찾기(name);
+        loc = 변수위치찾기(name);
         방출_TEXT(문자연결(문자연결("    mov ", loc), ", rax"));
         ㄹㅌ 0;
     }
@@ -710,13 +710,22 @@
     }
 
     ㄹㅇ (t == T_ID) {
-        ㅄ name = 토큰들[현재토큰][1];
+        name = 토큰들[현재토큰][1];
         소비(T_ID);
 
         ㄹㅇ (매치(T_EQ)) {
+            // Implicit declaration
+            ㄹㅇ (변수존재확인(name) == 0) {
+                ㄹㅇ (모드_메인 == 1) {
+                    전역변수등록(name);
+                } ㄴㄴ {
+                    지역변수등록(name);
+                }
+            }
+
             표현식();
             소비(T_SEMI);
-            ㅄ loc = 변수위치찾기(name);
+            loc = 변수위치찾기(name);
             방출_TEXT(문자연결(문자연결("    mov ", loc), ", rax"));
             ㄹㅌ 0;
         }
@@ -732,7 +741,7 @@
              방출_TEXT("    mov rbx, rax");
              방출_TEXT("    pop rax");
 
-             ㅄ loc = 변수위치찾기(name);
+             loc = 변수위치찾기(name);
              방출_TEXT(문자연결("    mov rdx, ", loc));
 
              방출_TEXT("    lea rcx, [rdx + rax*8]");
@@ -741,7 +750,7 @@
         }
 
         ㄹㅇ (매치(T_LPAREN)) {
-             ㅄ cnt = 0;
+             cnt = 0;
              ㄹㅇ (픽() != T_RPAREN) {
                 ㅂㅂ1 (1) {
                     표현식();
@@ -753,7 +762,7 @@
             소비(T_RPAREN);
             소비(T_SEMI);
 
-            ㅄ i = cnt;
+            i = cnt;
             ㅂㅂ1 (i > 0) {
                  ㄹㅇ (i == 1) { 방출_TEXT("    pop rcx"); }
                  ㄹㅇ (i == 2) { 방출_TEXT("    pop rdx"); }
@@ -844,14 +853,14 @@
 
              방출_TEXT("    mov rbx, rax");
 
-             ㅄ loc = 변수위치찾기(name);
+             loc = 변수위치찾기(name);
              방출_TEXT(문자연결("    mov rax, ", loc));
 
              방출_TEXT("    lea rcx, [rax + rbx*8]");
              방출_TEXT("    mov rax, [rcx]");
              ㄹㅌ 0;
         } ㄴㄴ {
-             ㅄ loc = 변수위치찾기(name);
+             loc = 변수위치찾기(name);
              방출_TEXT(문자연결("    mov rax, ", loc));
         }
     }
@@ -970,29 +979,29 @@
 }
 
 ㅎㅅ 인자() {
-    ㅄ t = 픽();
+    t = 픽();
 
     ㄹㅇ (t == T_NUM) {
-        ㅄ val = 토큰들[현재토큰][2];
+        val = 토큰들[현재토큰][2];
         소비(T_NUM);
         방출_TEXT(문자연결("    mov rax, ", 문자열변환(val)));
     }
 
     ㄹㅇ (t == T_STR) {
-         ㅄ val = 토큰들[현재토큰][2];
+         val = 토큰들[현재토큰][2];
          소비(T_STR);
-         ㅄ l_str = 새라벨();
+         l_str = 새라벨();
          방출_DATA(문자연결(l_str, ":"));
          방출_DATA(문자연결(문자연결("    db \"", val), "\", 0"));
          방출_TEXT(문자연결(문자연결("    lea rax, [", l_str), "]"));
     }
 
     ㄹㅇ (t == T_ID) {
-        ㅄ name = 토큰들[현재토큰][1];
+        name = 토큰들[현재토큰][1];
         소비(T_ID);
 
         ㄹㅇ (매치(T_LPAREN)) {
-             ㅄ cnt = 0;
+             cnt = 0;
              ㄹㅇ (픽() != T_RPAREN) {
                 ㅂㅂ1 (1) {
                     표현식();
@@ -1003,7 +1012,7 @@
             }
             소비(T_RPAREN);
 
-            ㅄ i = cnt;
+            i = cnt;
             ㅂㅂ1 (i > 0) {
                  ㄹㅇ (i == 1) { 방출_TEXT("    pop rcx"); }
                  ㄹㅇ (i == 2) { 방출_TEXT("    pop rdx"); }
@@ -1094,14 +1103,14 @@
 
              방출_TEXT("    mov rbx, rax");
 
-             ㅄ loc = 변수위치찾기(name);
+             loc = 변수위치찾기(name);
              방출_TEXT(문자연결("    mov rax, ", loc));
 
              방출_TEXT("    lea rcx, [rax + rbx*8]");
              방출_TEXT("    mov rax, [rcx]");
              ㄹㅌ 0;
         } ㄴㄴ {
-             ㅄ loc = 변수위치찾기(name);
+             loc = 변수위치찾기(name);
              방출_TEXT(문자연결("    mov rax, ", loc));
         }
     }
@@ -1113,6 +1122,8 @@
     }
 }
 
+소스 = "";
 ㅍㅇㅇㄹ(소스, "input.jm");
+렉서();
 프로그램();
 ㅊㄹ("Compilation Complete");

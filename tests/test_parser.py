@@ -16,11 +16,14 @@ class TestParser(unittest.TestCase):
         parser = Parser(tokens)
         return parser.parse()
 
-    def test_var_declaration(self):
-        stmts = self.parse('ㅄ x = 10;')
-        self.assertIsInstance(stmts[0], ast.Var)
-        self.assertEqual(stmts[0].name.lexeme, 'x')
-        self.assertEqual(stmts[0].initializer.value, 10)
+    def test_implicit_var_declaration(self):
+        stmts = self.parse('x = 10;')
+        # x = 10; is an ExpressionStatement(Assign(x, 10))
+        self.assertIsInstance(stmts[0], ast.Expression)
+        assign = stmts[0].expression
+        self.assertIsInstance(assign, ast.Assign)
+        self.assertEqual(assign.name.lexeme, 'x')
+        self.assertEqual(assign.value.value, 10)
 
     def test_print_statement(self):
         stmts = self.parse('ㅊㄹ("Hello");')
@@ -29,16 +32,10 @@ class TestParser(unittest.TestCase):
 
     def test_binary_expression(self):
         stmts = self.parse('Variable = 1 + 2 * 3;') 
-        # Variable name 'Variable' is valid identifier? First char 'V' is alpha.
-        # But wait, parser expects declaration or statement.
-        # 'Variable = ...' is an ExpressionStatement (Assignment)
-        # But 'Variable' matches identifier.
         self.assertIsInstance(stmts[0], ast.Expression)
         assign = stmts[0].expression
         self.assertIsInstance(assign, ast.Assign)
         
-        # 1 + 2 * 3 -> 1 + (2 * 3) -> Binary(1, +, Binary(2, *, 3))
-        # Wait, assignment value is the binary expr
         root = assign.value
         self.assertIsInstance(root, ast.Binary)
         self.assertEqual(root.operator.type, TokenType.PLUS)
@@ -46,7 +43,7 @@ class TestParser(unittest.TestCase):
         self.assertEqual(root.right.operator.type, TokenType.STAR)  
 
     def test_if_block(self):
-        source = 'ㄹㅇ (x > 10) { ㅍㅌ(x); }'
+        source = 'ㄹㅇ (x > 10) { ㅊㄹ(x); }'
         stmts = self.parse(source)
         self.assertIsInstance(stmts[0], ast.If)
         self.assertIsInstance(stmts[0].then_branch, ast.Block)

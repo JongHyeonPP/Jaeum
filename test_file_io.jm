@@ -1,5 +1,5 @@
 ㅍㅇㅊㄹ("test_output.txt", "Hello Jaeum File IO!");
-ㅄ content = "";
+content = "";
 ㅍㅇㅇㄹ(content, "test_output.txt");
 ㅊㄹ("File Content:");
 ㅊㄹ(content);

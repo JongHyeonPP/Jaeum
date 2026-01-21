@@ -100,38 +100,6 @@ class Compiler:
         self.emit("    call printf")
         self.emit("    add rsp, 32")
 
-    def visit_Var(self, stmt: ast.Var):
-        name = stmt.name.lexeme
-
-        if self.local_scope:
-            if name not in self.locals:
-                 # Should have been pre-calculated?
-                 # Or we can just reuse slots if we didn't pre-calc nicely.
-                 # But let's assume we pre-calculated in visit_Function.
-                 # If not found (e.g. inside nested block we missed?), we might error or fallback.
-                 # For now, let's assume valid local.
-                 pass
-            offset = self.locals.get(name)
-            if offset is None:
-                # Fallback to global? Or error?
-                # Dynamic allocation if not found?
-                # Let's treat as global if not found in locals map (unlikely if scanned correctly)
-                if name not in self.variables:
-                    self.variables[name] = "global"
-                target = f"[var_{name}]"
-            else:
-                target = f"[rbp - {offset}]"
-        else:
-            if name not in self.variables:
-                self.variables[name] = "global"
-            target = f"[var_{name}]"
-        
-        if stmt.initializer:
-            self.visit(stmt.initializer) # Result in RAX
-            self.emit(f"    mov {target}, rax")
-        else:
-            self.emit(f"    mov qword {target}, 0")
-
     def visit_Expression(self, stmt: ast.Expression):
         self.visit(stmt.expression)
 
@@ -207,11 +175,37 @@ class Compiler:
         self.visit(expr.value) # Value in RAX
         name = expr.name.lexeme
 
-        if self.local_scope and name in self.locals:
-            offset = self.locals[name]
-            self.emit(f"    mov [rbp - {offset}], rax")
+        if self.local_scope:
+            if name not in self.locals and name not in self.variables:
+                # Implicit declaration (Local)
+                # We need to allocate stack slot.
+                # Currently we pre-calc stack size in visit_Function.
+                # If we missed it there, we might overwrite stack?
+                # But we can assume visit_Function collects it?
+                # I need to update _collect_vars to look at Assigns too.
+                # For now, if found in locals, use it.
+                # If NOT found in locals but IS global, use global.
+                # If NOT found in either, declare LOCAL.
+                pass
+
+            if name in self.locals:
+                offset = self.locals[name]
+                self.emit(f"    mov [rbp - {offset}], rax")
+            elif name in self.variables:
+                self.emit(f"    mov [var_{name}], rax")
+            else:
+                # New Local
+                # NOTE: _collect_vars must find this for this to work safely with stack alloc.
+                # If _collect_vars didn't find it, we didn't alloc space.
+                # So we must update _collect_vars first.
+                # Assuming _collect_vars found it, it should be in self.locals.
+                # If it's not in self.locals here, it means _collect_vars failed or logic mismatch.
+                # But let's assume we fixed _collect_vars.
+                pass
         else:
-            # Check Global
+            # Global scope
+            if name not in self.variables:
+                self.variables[name] = "global"
             self.emit(f"    mov [var_{name}], rax")
 
     def visit_Binary(self, expr: ast.Binary):
@@ -265,8 +259,9 @@ class Compiler:
         current_offset = 8
         for var_name in local_vars:
             if var_name not in self.locals:
-                self.locals[var_name] = current_offset
-                current_offset += 8
+                if var_name not in self.variables:
+                    self.locals[var_name] = current_offset
+                    current_offset += 8
 
         # Allocate stack space
         stack_size = current_offset + 32 # +32 for shadow space calls?
@@ -296,18 +291,19 @@ class Compiler:
 
     def _collect_vars(self, block, acc):
         for stmt in block:
-            if isinstance(stmt, ast.Var):
-                acc.append(stmt.name.lexeme)
+            if isinstance(stmt, ast.Expression):
+                # Check for Assign expression
+                if isinstance(stmt.expression, ast.Assign):
+                    acc.append(stmt.expression.name.lexeme)
             elif isinstance(stmt, ast.Block):
                 self._collect_vars(stmt.statements, acc)
             elif isinstance(stmt, ast.If):
-                self._collect_vars(stmt.then_branch.statements, acc) # Block is list? No, Block object
+                self._collect_vars(stmt.then_branch.statements, acc)
                 if stmt.else_branch:
-                     # Check if else branch is block or if
                      if isinstance(stmt.else_branch, ast.Block):
                          self._collect_vars(stmt.else_branch.statements, acc)
                      else:
-                         self._collect_vars([stmt.else_branch], acc) # If it's a stmt
+                         self._collect_vars([stmt.else_branch], acc)
             elif isinstance(stmt, ast.While):
                 self._collect_vars(stmt.body.statements, acc)
 
@@ -492,7 +488,7 @@ class Compiler:
         self.emit("    call fopen")
         self.emit("    add rsp, 32")
         self.emit("    mov rbx, rax")
-        
+
         self.visit(stmt.content)
         self.emit("    mov rcx, rbx")
         self.emit("    mov rdx, rax")

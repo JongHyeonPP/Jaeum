@@ -1,4 +1,4 @@
-ㅄ 카운트 = 0;
+카운트 = 0;
 ㅊㄹ("With: ㅂㅂ1 (While)");
 
 ㅂㅂ1 (카운트 < 3) {
@@ -7,6 +7,7 @@
 }
 
 ㅊㄹ("With: ㅂㅂ2 (For)");
-ㅂㅂ2 (ㅄ i = 0; i < 3; i = i + 1) {
+// Assuming ㅂㅂ2 (For) desugars initializer expression statement
+ㅂㅂ2 (i = 0; i < 3; i = i + 1) {
     ㅊㄹ(i);
 }

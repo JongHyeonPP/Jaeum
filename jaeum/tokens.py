@@ -12,7 +12,6 @@ class TokenType(Enum):
     STRING = auto()
     
     # Keywords (Consonants)
-    VAR = auto()      # ㅄ (Variable)
     IF = auto()       # ㄹㅇ (Real? / If)
     ELSE = auto()     # ㄴㄴ (No No / Else)
     WHILE = auto()    # ㅁㅈ (Right / While)
@@ -73,7 +72,6 @@ class Token:
 
 # Keyword Map
 KEYWORDS = {
-    "ㅄ": TokenType.VAR,
     "ㄹㅇ": TokenType.IF,
     "ㄴㄴ": TokenType.ELSE,
     "ㅂㅂ1": TokenType.WHILE,
