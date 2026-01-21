@@ -23,7 +23,7 @@ class TestParser(unittest.TestCase):
         self.assertEqual(stmts[0].initializer.value, 10)
 
     def test_print_statement(self):
-        stmts = self.parse('ㅍㅌ("Hello");')
+        stmts = self.parse('ㅊㄹ("Hello");')
         self.assertIsInstance(stmts[0], ast.Print)
         self.assertEqual(stmts[0].expression.value, "Hello")
 

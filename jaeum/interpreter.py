@@ -51,8 +51,14 @@ class Interpreter:
         self.globals = Environment()
         self.environment = self.globals
         
-        # Built-in Functions should be defined here
-        # self.globals.define("clock", ...) 
+        # Built-in Functions
+        self.globals.define("준비", BuiltIn(lambda args: [None] * args[0], 1))
+        self.globals.define("길이", BuiltIn(lambda args: len(args[0]), 1))
+        self.globals.define("코드", BuiltIn(lambda args: ord(args[0][0]) if isinstance(args[0], str) and len(args[0]) > 0 else 0, 1))
+        self.globals.define("문자", BuiltIn(lambda args: chr(args[0]), 1))
+        self.globals.define("문자연결", BuiltIn(lambda args: str(args[0]) + str(args[1]), 2))
+        self.globals.define("문자읽기", BuiltIn(lambda args: ord(args[0][args[1]]), 2))
+        self.globals.define("문자열변환", BuiltIn(lambda args: str(args[0]), 1))
 
     def interpret(self, statements: List[ast.Stmt]):
         try:
@@ -125,6 +131,12 @@ class Interpreter:
         if stmt.value:
             value = self.evaluate(stmt.value)
         raise Return(value)
+
+    def visit_Break(self, stmt: ast.Break):
+        raise Break()
+
+    def visit_Continue(self, stmt: ast.Continue):
+        raise Continue()
 
     def visit_Var(self, stmt: ast.Var):
         value = UNDEFINED
@@ -227,6 +239,16 @@ class Interpreter:
 
     def visit_Get(self, expr: ast.Get):
         object = self.evaluate(expr.object)
+
+        if isinstance(object, str):
+            index = self.evaluate(expr.name)
+            if not isinstance(index, int):
+                raise RuntimeError(expr.bracket, "Index must be an integer.")
+            try:
+                return ord(object[index])
+            except IndexError:
+                raise RuntimeError(expr.bracket, "String index out of bounds.")
+
         if not isinstance(object, list):
             raise RuntimeError(expr.bracket, "Only arrays have elements.")
         
@@ -324,6 +346,15 @@ class JaeumCallable:
         pass
     def arity(self) -> int:
         pass
+
+class BuiltIn(JaeumCallable):
+    def __init__(self, func, arity_val):
+        self.func = func
+        self.arity_val = arity_val
+    def call(self, interpreter, arguments):
+        return self.func(arguments)
+    def arity(self):
+        return self.arity_val
 
 class JaeumFunction(JaeumCallable):
     def __init__(self, declaration: ast.Function, closure: Environment):

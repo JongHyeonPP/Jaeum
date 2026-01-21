@@ -1,0 +1,319 @@
+// Jaeumeo Compiler in Jaeumeo (Bootstrapping)
+
+// Constants (Token Types)
+ㅄ T_EOF = 0;
+ㅄ T_ID = 1;
+ㅄ T_NUM = 2;
+ㅄ T_STR = 3;
+ㅄ T_VAR = 4; // ㅄ
+ㅄ T_FUNC = 5; // ㅎㅅ
+ㅄ T_PRINT = 6; // ㅊㄹ
+ㅄ T_LPAREN = 7; // (
+ㅄ T_RPAREN = 8; // )
+ㅄ T_LBRACE = 9; // {
+ㅄ T_RBRACE = 10; // }
+ㅄ T_SEMI = 11; // ;
+ㅄ T_EQ = 12; // =
+ㅄ T_PLUS = 13; // +
+ㅄ T_MINUS = 14; // -
+ㅄ T_STAR = 15; // *
+ㅄ T_SLASH = 16; // /
+ㅄ T_COMMA = 17; // ,
+ㅄ T_LBRACKET = 18; // [
+ㅄ T_RBRACKET = 19; // ]
+ㅄ T_RETURN = 20; // ㄹㅌ
+ㅄ T_IF = 21; // ㄹㅇ
+ㅄ T_WHILE = 22; // ㅂㅂ1
+ㅄ T_LT = 23; // <
+ㅄ T_GT = 24; // >
+
+// Global Variables
+ㅄ 소스 = "";
+ㅄ 토큰들 = 준비(10000); // Max 10000 tokens
+ㅄ 토큰수 = 0;
+ㅄ 현재토큰 = 0;
+
+ㅄ 출력_TEXT = "";
+ㅄ 출력_DATA = "";
+ㅄ 출력_BSS = "";
+
+ㅄ 변수목록 = 준비(1000);
+ㅄ 변수개수 = 0;
+
+// Helper: Append Token
+ㅎㅅ 토큰추가(type, lexeme, literal) {
+    ㅄ t = 준비(4);
+    t[0] = type;
+    t[1] = lexeme;
+    t[2] = literal;
+    t[3] = 0; // Line
+    토큰들[토큰수] = t;
+    토큰수 = 토큰수 + 1;
+}
+
+// Helper: Is Alpha
+ㅎㅅ 알파벳이냐(c) {
+    // a-z: 97-122, A-Z: 65-90
+    ㄹㅇ (c >= 97) { ㄹㅇ (c <= 122) { ㄹㅌ 1; } }
+    ㄹㅇ (c >= 65) { ㄹㅇ (c <= 90) { ㄹㅌ 1; } }
+    // Korean: Not fully checking here for simplicity, assuming identifiers are handled
+    ㄹㅌ 0;
+}
+
+// Helper: Is Digit
+ㅎㅅ 숫자냐(c) {
+    ㄹㅇ (c >= 48) { ㄹㅇ (c <= 57) { ㄹㅌ 1; } }
+    ㄹㅌ 0;
+}
+
+// Helper: Substring
+ㅎㅅ 자르기(s, start, len) {
+    ㅄ res = "";
+    ㅄ i = 0;
+    ㅂㅂ1 (i < len) {
+        res = 문자연결(res, 문자(문자읽기(s, start + i)));
+        i = i + 1;
+    }
+    ㄹㅌ res;
+}
+
+// Helper: String to Int
+ㅎㅅ 문자열_정수로(s) {
+    ㅄ len = 길이(s);
+    ㅄ res = 0;
+    ㅄ i = 0;
+    ㅂㅂ1 (i < len) {
+       ㅄ c = 문자읽기(s, i);
+       // '0' is 48
+       res = res * 10 + (c - 48);
+       i = i + 1;
+    }
+    ㄹㅌ res;
+}
+
+// Helper: Add Variable to List (for BSS)
+ㅎㅅ 변수등록(name) {
+    // Check dupe? O(N)
+    ㅄ i = 0;
+    ㅂㅂ1 (i < 변수개수) {
+        ㄹㅇ (변수목록[i] == name) { ㄹㅌ 0; }
+        i = i + 1;
+    }
+    변수목록[변수개수] = name;
+    변수개수 = 변수개수 + 1;
+}
+
+// Lexer
+ㅎㅅ 렉서() {
+    ㅄ i = 0;
+    ㅄ len = 길이(소스);
+
+    ㅂㅂ1 (i < len) {
+        ㅄ c = 문자읽기(소스, i);
+
+        // Skip whitespace
+        ㄹㅇ (c == 32) { i = i + 1; ㄹㄹ; } // space
+        ㄹㅇ (c == 10) { i = i + 1; ㄹㄹ; } // newline
+        ㄹㅇ (c == 13) { i = i + 1; ㄹㄹ; } // CR
+
+        // Single char tokens
+        ㄹㅇ (c == 40) { 토큰추가(T_LPAREN, "(", 0); i = i + 1; ㄹㄹ; } // (
+        ㄹㅇ (c == 41) { 토큰추가(T_RPAREN, ")", 0); i = i + 1; ㄹㄹ; } // )
+        ㄹㅇ (c == 123) { 토큰추가(T_LBRACE, "{", 0); i = i + 1; ㄹㄹ; } // {
+        ㄹㅇ (c == 125) { 토큰추가(T_RBRACE, "}", 0); i = i + 1; ㄹㄹ; } // }
+        ㄹㅇ (c == 91) { 토큰추가(T_LBRACKET, "[", 0); i = i + 1; ㄹㄹ; } // [
+        ㄹㅇ (c == 93) { 토큰추가(T_RBRACKET, "]", 0); i = i + 1; ㄹㄹ; } // ]
+        ㄹㅇ (c == 59) { 토큰추가(T_SEMI, ";", 0); i = i + 1; ㄹㄹ; } // ;
+        ㄹㅇ (c == 44) { 토큰추가(T_COMMA, ",", 0); i = i + 1; ㄹㄹ; } // ,
+        ㄹㅇ (c == 61) { 토큰추가(T_EQ, "=", 0); i = i + 1; ㄹㄹ; } // =
+        ㄹㅇ (c == 43) { 토큰추가(T_PLUS, "+", 0); i = i + 1; ㄹㄹ; } // +
+        ㄹㅇ (c == 45) { 토큰추가(T_MINUS, "-", 0); i = i + 1; ㄹㄹ; } // -
+        ㄹㅇ (c == 42) { 토큰추가(T_STAR, "*", 0); i = i + 1; ㄹㄹ; } // *
+        ㄹㅇ (c == 47) { 토큰추가(T_SLASH, "/", 0); i = i + 1; ㄹㄹ; } // /
+
+        // String "..."
+        ㄹㅇ (c == 34) { // "
+            i = i + 1;
+            ㅄ start = i;
+            ㅂㅂ1 (문자읽기(소스, i) != 34) { // until "
+                i = i + 1;
+            }
+            ㅄ content = 자르기(소스, start, i - start);
+            토큰추가(T_STR, content, content);
+            i = i + 1; // skip closing "
+            ㄹㄹ;
+        }
+
+        // Number
+        ㄹㅇ (숫자냐(c)) {
+            ㅄ start = i;
+            ㅂㅂ1 (숫자냐(문자읽기(소스, i))) {
+                i = i + 1;
+            }
+            ㅄ num_str = 자르기(소스, start, i - start);
+            ㅄ val = 문자열_정수로(num_str);
+            토큰추가(T_NUM, num_str, val);
+            ㄹㄹ;
+        }
+
+        // Identifier / Keyword
+        ㅄ start = i;
+        ㅂㅂ1 (문자읽기(소스, i) != 32) { // Read until space or special char
+             c = 문자읽기(소스, i);
+             ㄹㅇ (c == 40) { ㅃ; } // (
+             ㄹㅇ (c == 41) { ㅃ; } // )
+             ㄹㅇ (c == 59) { ㅃ; } // ;
+             ㄹㅇ (c == 61) { ㅃ; } // =
+             ㄹㅇ (c == 91) { ㅃ; } // [
+             ㄹㅇ (c == 93) { ㅃ; } // ]
+             ㄹㅇ (c == 44) { ㅃ; } // ,
+             ㄹㅇ (c == 10) { ㅃ; } // newline
+             i = i + 1;
+             ㄹㅇ (i >= len) { ㅃ; }
+        }
+
+        ㅄ txt = 자르기(소스, start, i - start);
+
+        // Check Keywords
+        ㅄ type = T_ID;
+        ㄹㅇ (txt == "ㅄ") { type = T_VAR; }
+        ㄹㅇ (txt == "ㅎㅅ") { type = T_FUNC; }
+        ㄹㅇ (txt == "ㅊㄹ") { type = T_PRINT; }
+        ㄹㅇ (txt == "ㄹㅌ") { type = T_RETURN; }
+        ㄹㅇ (txt == "ㄹㅇ") { type = T_IF; }
+        ㄹㅇ (txt == "ㅂㅂ1") { type = T_WHILE; }
+
+        토큰추가(type, txt, 0);
+    }
+    토큰추가(T_EOF, "", 0);
+}
+
+// Code Generator Helper
+ㅎㅅ 방출_TEXT(line) {
+    출력_TEXT = 문자연결(출력_TEXT, line);
+    출력_TEXT = 문자연결(출력_TEXT, 문자(10)); // Newline
+}
+ㅎㅅ 방출_DATA(line) {
+    출력_DATA = 문자연결(출력_DATA, line);
+    출력_DATA = 문자연결(출력_DATA, 문자(10));
+}
+ㅎㅅ 방출_BSS(line) {
+    출력_BSS = 문자연결(출력_BSS, line);
+    출력_BSS = 문자연결(출력_BSS, 문자(10));
+}
+
+// Parser matchers
+ㅎㅅ 매치(type) {
+    ㅄ t = 토큰들[현재토큰];
+    ㄹㅇ (t[0] == type) {
+        현재토큰 = 현재토큰 + 1;
+        ㄹㅌ 1;
+    }
+    ㄹㅌ 0;
+}
+
+ㅎㅅ 소비(type) {
+    ㄹㅇ (매치(type)) { ㄹㅌ 1; }
+    ㅊㄹ("Error: Expected token");
+    ㄹㅌ 0;
+}
+
+ㅎㅅ 컴파일() {
+    방출_TEXT("section .text");
+    방출_TEXT("global Start");
+    방출_TEXT("extern ExitProcess");
+    방출_TEXT("extern printf");
+    방출_TEXT("extern malloc");
+    방출_TEXT("Start:");
+    방출_TEXT("    sub rsp, 40");
+
+    // Parse Statements
+    ㅂㅂ1 (토큰들[현재토큰][0] != T_EOF) {
+        문장();
+    }
+
+    방출_TEXT("    xor rcx, rcx");
+    방출_TEXT("    call ExitProcess");
+
+    // Data section
+    방출_DATA("section .data");
+    방출_DATA("    fmt_int db \"%lld\", 10, 0");
+    방출_DATA("    fmt_str db \"%s\", 10, 0");
+
+    // BSS section
+    방출_BSS("section .bss");
+    ㅄ i = 0;
+    ㅂㅂ1 (i < 변수개수) {
+        방출_BSS(문자연결(문자연결("    var_", 변수목록[i]), " resq 1"));
+        i = i + 1;
+    }
+}
+
+ㅎㅅ 문장() {
+    ㅄ t = 토큰들[현재토큰];
+
+    // ㅊㄹ (Print)
+    ㄹㅇ (t[0] == T_PRINT) {
+        소비(T_PRINT);
+        소비(T_LPAREN);
+        표현식(); // Puts result in RAX
+        소비(T_RPAREN);
+        소비(T_SEMI);
+
+        방출_TEXT("    lea rcx, [fmt_int]");
+        방출_TEXT("    mov rdx, rax");
+        방출_TEXT("    call printf");
+        ㄹㅌ 0;
+    }
+
+    // ㅄ (Var)
+    ㄹㅇ (t[0] == T_VAR) {
+        소비(T_VAR);
+        ㅄ name = 토큰들[현재토큰][1];
+        변수등록(name);
+        소비(T_ID);
+        소비(T_EQ);
+        표현식();
+        소비(T_SEMI);
+
+        방출_TEXT(문자연결(문자연결("    mov [var_", name), "], rax"));
+        ㄹㅌ 0;
+    }
+
+    // Skip unknown
+    현재토큰 = 현재토큰 + 1;
+}
+
+ㅎㅅ 표현식() {
+    ㅄ t = 토큰들[현재토큰];
+
+    ㄹㅇ (t[0] == T_NUM) {
+        ㅄ val = t[2]; // parsed int value
+        방출_TEXT(문자연결("    mov rax, ", 문자열변환(val)));
+        현재토큰 = 현재토큰 + 1;
+    }
+
+    ㄹㅇ (t[0] == T_STR) {
+         현재토큰 = 현재토큰 + 1;
+    }
+
+    ㄹㅇ (t[0] == T_ID) {
+         ㅄ name = t[1];
+         방출_TEXT(문자연결(문자연결("    mov rax, [var_", name), "]"));
+         현재토큰 = 현재토큰 + 1;
+    }
+}
+
+
+// Main
+ㅍㅇㅇㄹ(소스, "input.jm");
+렉서();
+컴파일();
+
+ㅄ 전체출력 = "";
+전체출력 = 문자연결(전체출력, 출력_TEXT);
+전체출력 = 문자연결(전체출력, 출력_DATA);
+전체출력 = 문자연결(전체출력, 출력_BSS);
+
+ㅍㅇㅊㄹ("output.asm", 전체출력);
+ㅊㄹ("Compilation Complete");

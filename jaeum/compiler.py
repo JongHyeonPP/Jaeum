@@ -26,6 +26,9 @@ class Compiler:
         self.emit("extern fseek")
         self.emit("extern ftell")
         self.emit("extern rewind")
+        self.emit("extern strlen")
+        self.emit("extern strcpy")
+        self.emit("extern strcat")
         
         self.emit("section .text")
         self.emit("Start:")
@@ -276,6 +279,12 @@ class Compiler:
         self.emit("    ret")
 
     def visit_Call(self, expr: ast.Call):
+        if isinstance(expr.callee, ast.Variable):
+            func_name = expr.callee.name.lexeme
+            if func_name in ["준비", "길이", "코드", "문자", "문자연결", "문자읽기"]:
+                self.compile_intrinsic(func_name, expr.arguments)
+                return
+
         # Save registers? NASM doesn't auto save.
         # Caller saved regs: RCX, RDX, R8, R9, R10, R11.
         # We are using RAX for results.
@@ -318,6 +327,97 @@ class Compiler:
             self.emit(f"    call func_{func_name}")
         
         self.emit("    add rsp, 32")
+
+    def compile_intrinsic(self, name, args):
+        if name == "준비":
+            self.visit(args[0]) # Size in RAX
+            self.emit("    imul rax, 8") # Bytes
+            self.emit("    mov rcx, rax")
+            self.emit("    sub rsp, 32")
+            self.emit("    call malloc")
+            self.emit("    add rsp, 32")
+        elif name == "길이":
+            self.visit(args[0]) # Ptr in RAX
+            self.emit("    mov rcx, rax")
+            self.emit("    sub rsp, 32")
+            self.emit("    call strlen")
+            self.emit("    add rsp, 32")
+        elif name == "코드":
+            self.visit(args[0]) # Ptr in RAX
+            self.emit("    movzx rax, byte [rax]")
+        elif name == "문자읽기":
+            self.visit(args[0]) # Ptr in RAX
+            self.emit("    push rax")
+            self.visit(args[1]) # Index in RAX
+            self.emit("    pop rbx") # Ptr in RBX
+            self.emit("    add rbx, rax") # Add index
+            self.emit("    movzx rax, byte [rbx]")
+        elif name == "문자":
+            self.visit(args[0]) # Code in RAX
+            self.emit("    push rax")
+            self.emit("    mov rcx, 2") # 2 bytes
+            self.emit("    sub rsp, 32")
+            self.emit("    call malloc")
+            self.emit("    add rsp, 32")
+            self.emit("    pop rbx") # Code
+            self.emit("    mov [rax], bl") # Store byte
+            self.emit("    mov byte [rax+1], 0") # Null term
+        elif name == "문자연결":
+            self.emit("    push r12")
+            self.emit("    push r13")
+            self.emit("    push r14")
+            self.emit("    push r15")
+
+            self.visit(args[0])
+            self.emit("    push rax") # s1
+            self.visit(args[1])
+            self.emit("    push rax") # s2
+
+            self.emit("    pop r13") # s2
+            self.emit("    pop r12") # s1
+
+            # strlen(s1)
+            self.emit("    mov rcx, r12")
+            self.emit("    sub rsp, 32")
+            self.emit("    call strlen")
+            self.emit("    add rsp, 32")
+            self.emit("    mov r14, rax") # len1
+
+            # strlen(s2)
+            self.emit("    mov rcx, r13")
+            self.emit("    sub rsp, 32")
+            self.emit("    call strlen")
+            self.emit("    add rsp, 32")
+            self.emit("    add r14, rax") # len1 + len2
+            self.emit("    inc r14")      # +1
+
+            # malloc
+            self.emit("    mov rcx, r14")
+            self.emit("    sub rsp, 32")
+            self.emit("    call malloc")
+            self.emit("    add rsp, 32")
+            self.emit("    mov r15, rax") # new ptr
+
+            # strcpy(new, s1)
+            self.emit("    mov rcx, r15")
+            self.emit("    mov rdx, r12")
+            self.emit("    sub rsp, 32")
+            self.emit("    call strcpy")
+            self.emit("    add rsp, 32")
+
+            # strcat(new, s2)
+            self.emit("    mov rcx, r15")
+            self.emit("    mov rdx, r13")
+            self.emit("    sub rsp, 32")
+            self.emit("    call strcat")
+            self.emit("    add rsp, 32")
+
+            self.emit("    mov rax, r15") # Return new ptr
+
+            self.emit("    pop r15")
+            self.emit("    pop r14")
+            self.emit("    pop r13")
+            self.emit("    pop r12")
 
     # Update visit_Variable to handle Locals (Params)
     def visit_Variable(self, expr: ast.Variable):

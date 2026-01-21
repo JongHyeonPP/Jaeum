@@ -23,7 +23,7 @@ class TestInterpreter(unittest.TestCase):
     def test_arithmetic(self):
         # We can't easily check internal state unless we expose environment or capture print
         # Let's use print capturing
-        source = 'ㅍㅌ(1 + 2 * 3);'
+        source = 'ㅊㄹ(1 + 2 * 3);'
         f = io.StringIO()
         with redirect_stdout(f):
             self.run_script(source)
@@ -34,9 +34,9 @@ class TestInterpreter(unittest.TestCase):
         ㅄ a = "global";
         {
             ㅄ a = "local";
-            ㅍㅌ(a);
+            ㅊㄹ(a);
         }
-        ㅍㅌ(a);
+        ㅊㄹ(a);
         """
         f = io.StringIO()
         with redirect_stdout(f):
@@ -47,8 +47,8 @@ class TestInterpreter(unittest.TestCase):
 
     def test_if_logic(self):
         source = """
-        ㄹㅇ (ㅇ) { ㅍㅌ("true"); }
-        ㄹㅇ (ㄴ) { ㅍㅌ("false"); }
+        ㄹㅇ (ㅇ) { ㅊㄹ("true"); }
+        ㄹㅇ (ㄴ) { ㅊㄹ("false"); }
         """
         f = io.StringIO()
         with redirect_stdout(f):
@@ -60,7 +60,7 @@ class TestInterpreter(unittest.TestCase):
         ㅎㅅ add(a, b) {
             ㄹㅌ a + b;
         }
-        ㅍㅌ(add(10, 20));
+        ㅊㄹ(add(10, 20));
         """
         f = io.StringIO()
         with redirect_stdout(f):
@@ -73,7 +73,7 @@ class TestInterpreter(unittest.TestCase):
             ㄹㅇ (n <= 1) { ㄹㅌ n; }
             ㄹㅌ fib(n - 1) + fib(n - 2);
         }
-        ㅍㅌ(fib(6));
+        ㅊㄹ(fib(6));
         """
         # fib(6) = 8
         f = io.StringIO()
