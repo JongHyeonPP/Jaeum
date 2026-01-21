@@ -66,6 +66,8 @@ class Parser:
             return self.input_statement()
         if self.match(TokenType.FILE_WRITE):
             return self.file_write_statement()
+        if self.match(TokenType.FILE_APPEND):
+            return self.file_append_statement()
         if self.match(TokenType.FILE_READ):
             return self.file_read_statement()
         if self.match(TokenType.RETURN):
@@ -164,6 +166,15 @@ class Parser:
         self.consume(TokenType.SEMICOLON, "Expect ';' after file write.")
         # ㅍㅇㅊㄹ(경로, 내용);
         return ast.FileWrite(path, content)
+
+    def file_append_statement(self) -> ast.FileAppend:
+        self.consume(TokenType.LPAREN, "Expect '(' after 'ㅍㅇㅊㄱ'.")
+        path = self.expression()
+        self.consume(TokenType.COMMA, "Expect ',' between path and content.")
+        content = self.expression()
+        self.consume(TokenType.RPAREN, "Expect ')' after content.")
+        self.consume(TokenType.SEMICOLON, "Expect ';' after file append.")
+        return ast.FileAppend(path, content)
 
     def file_read_statement(self) -> ast.FileRead:
         self.consume(TokenType.LPAREN, "Expect '(' after 'ㅍㅇㅇㄹ'.")

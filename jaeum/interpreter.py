@@ -288,9 +288,20 @@ class Interpreter:
             with open(path_str, "w", encoding="utf-8") as f:
                 f.write(content_str)
         except Exception as e:
-            # Report runtime error but don't crash interpreter if possible? 
-            # Or crash? Let's print error
              print(f"Error writing file '{path_str}': {e}", file=sys.stderr)
+
+    def visit_FileAppend(self, stmt: ast.FileAppend):
+        path = self.evaluate(stmt.path)
+        content = self.evaluate(stmt.content)
+
+        path_str = self.stringify(path)
+        content_str = self.stringify(content)
+
+        try:
+            with open(path_str, "a", encoding="utf-8") as f:
+                f.write(content_str)
+        except Exception as e:
+             print(f"Error appending file '{path_str}': {e}", file=sys.stderr)
 
     def visit_FileRead(self, stmt: ast.FileRead):
         path = self.evaluate(stmt.path)

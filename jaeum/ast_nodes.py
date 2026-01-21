@@ -99,6 +99,11 @@ class FileWrite(Stmt):
     content: Expr
 
 @dataclass
+class FileAppend(Stmt):
+    path: Expr
+    content: Expr
+
+@dataclass
 class FileRead(Stmt):
     path: Expr
     target_var: Token
