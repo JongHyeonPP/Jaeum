@@ -23,8 +23,6 @@ class Parser:
         try:
             if self.match(TokenType.FUNC):
                 return self.function("function")
-            if self.match(TokenType.VAR):
-                return self.var_declaration()
             return self.statement()
         except ParseError:
             self.synchronize()
@@ -44,14 +42,6 @@ class Parser:
         body = self.block()
         return ast.Function(name, parameters, body.statements)
 
-    def var_declaration(self) -> ast.Var:
-        name = self.consume(TokenType.IDENTIFIER, "Expect variable name.")
-        initializer = None
-        if self.match(TokenType.EQUAL):
-            initializer = self.expression()
-        self.consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.")
-        return ast.Var(name, initializer)
-
     # Statements
     def statement(self) -> ast.Stmt:
         if self.match(TokenType.IF):
@@ -66,6 +56,8 @@ class Parser:
             return self.input_statement()
         if self.match(TokenType.FILE_WRITE):
             return self.file_write_statement()
+        if self.match(TokenType.FILE_APPEND):
+            return self.file_append_statement()
         if self.match(TokenType.FILE_READ):
             return self.file_read_statement()
         if self.match(TokenType.RETURN):
@@ -109,8 +101,6 @@ class Parser:
         initializer = None
         if self.match(TokenType.SEMICOLON):
             initializer = None
-        elif self.match(TokenType.VAR):
-            initializer = self.var_declaration()
         else:
             initializer = self.expression_statement()
         
@@ -165,6 +155,15 @@ class Parser:
         # ㅍㅇㅊㄹ(경로, 내용);
         return ast.FileWrite(path, content)
 
+    def file_append_statement(self) -> ast.FileAppend:
+        self.consume(TokenType.LPAREN, "Expect '(' after 'ㅍㅇㅊㄱ'.")
+        path = self.expression()
+        self.consume(TokenType.COMMA, "Expect ',' between path and content.")
+        content = self.expression()
+        self.consume(TokenType.RPAREN, "Expect ')' after content.")
+        self.consume(TokenType.SEMICOLON, "Expect ';' after file append.")
+        return ast.FileAppend(path, content)
+
     def file_read_statement(self) -> ast.FileRead:
         self.consume(TokenType.LPAREN, "Expect '(' after 'ㅍㅇㅇㄹ'.")
         target = self.consume(TokenType.IDENTIFIER, "Expect variable name to store file content.")
@@ -201,7 +200,9 @@ class Parser:
     def block(self) -> ast.Block:
         statements = []
         while not self.check(TokenType.RBRACE) and not self.is_at_end():
-            statements.append(self.declaration())
+            decl = self.declaration()
+            if decl:
+                statements.append(decl)
         self.consume(TokenType.RBRACE, "Expect '}' after block.")
         return ast.Block(statements)
 
@@ -374,7 +375,7 @@ class Parser:
         while not self.is_at_end():
             if self.previous().type == TokenType.SEMICOLON: return
             if self.peek().type in [
-                TokenType.FUNC, TokenType.VAR, TokenType.FOR,
+                TokenType.FUNC, TokenType.FOR,
                 TokenType.IF, TokenType.WHILE, TokenType.PRINT,
                 TokenType.RETURN, TokenType.INPUT
             ]:

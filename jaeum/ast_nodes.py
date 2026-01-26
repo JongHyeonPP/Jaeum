@@ -99,6 +99,11 @@ class FileWrite(Stmt):
     content: Expr
 
 @dataclass
+class FileAppend(Stmt):
+    path: Expr
+    content: Expr
+
+@dataclass
 class FileRead(Stmt):
     path: Expr
     target_var: Token
@@ -107,11 +112,6 @@ class FileRead(Stmt):
 class Return(Stmt):
     keyword: Token
     value: Expr
-
-@dataclass
-class Var(Stmt):
-    name: Token
-    initializer: Expr
 
 @dataclass
 class While(Stmt):

@@ -12,7 +12,6 @@ class TokenType(Enum):
     STRING = auto()
     
     # Keywords (Consonants)
-    VAR = auto()      # ㅄ (Variable)
     IF = auto()       # ㄹㅇ (Real? / If)
     ELSE = auto()     # ㄴㄴ (No No / Else)
     WHILE = auto()    # ㅁㅈ (Right / While)
@@ -24,6 +23,7 @@ class TokenType(Enum):
     PRINT = auto()    # ㅊㄹ (Print)
     INPUT = auto()    # ㅇㄹ (Input)
     FILE_WRITE = auto() # ㅍㅇㅊㄹ (File Write)
+    FILE_APPEND = auto() # ㅍㅇㅊㄱ (File Append)
     FILE_READ = auto()  # ㅍㅇㅇㄹ (File Read)
     
     # Constants
@@ -72,7 +72,6 @@ class Token:
 
 # Keyword Map
 KEYWORDS = {
-    "ㅄ": TokenType.VAR,
     "ㄹㅇ": TokenType.IF,
     "ㄴㄴ": TokenType.ELSE,
     "ㅂㅂ1": TokenType.WHILE,
@@ -84,6 +83,7 @@ KEYWORDS = {
     "ㅊㄹ": TokenType.PRINT,
     "ㅇㄹ": TokenType.INPUT,
     "ㅍㅇㅊㄹ": TokenType.FILE_WRITE,
+    "ㅍㅇㅊㄱ": TokenType.FILE_APPEND,
     "ㅍㅇㅇㄹ": TokenType.FILE_READ,
     "ㅇ": TokenType.TRUE,
     "ㄴ": TokenType.FALSE,

@@ -51,8 +51,14 @@ class Interpreter:
         self.globals = Environment()
         self.environment = self.globals
         
-        # Built-in Functions should be defined here
-        # self.globals.define("clock", ...) 
+        # Built-in Functions
+        self.globals.define("준비", BuiltIn(lambda args: [None] * args[0], 1))
+        self.globals.define("길이", BuiltIn(lambda args: len(args[0]), 1))
+        self.globals.define("코드", BuiltIn(lambda args: ord(args[0][0]) if isinstance(args[0], str) and len(args[0]) > 0 else 0, 1))
+        self.globals.define("문자", BuiltIn(lambda args: chr(args[0]), 1))
+        self.globals.define("문자연결", BuiltIn(lambda args: str(args[0]) + str(args[1]), 2))
+        self.globals.define("문자읽기", BuiltIn(lambda args: ord(args[0][args[1]]), 2))
+        self.globals.define("문자열변환", BuiltIn(lambda args: str(args[0]), 1))
 
     def interpret(self, statements: List[ast.Stmt]):
         try:
@@ -126,11 +132,11 @@ class Interpreter:
             value = self.evaluate(stmt.value)
         raise Return(value)
 
-    def visit_Var(self, stmt: ast.Var):
-        value = UNDEFINED
-        if stmt.initializer:
-            value = self.evaluate(stmt.initializer)
-        self.environment.define(stmt.name.lexeme, value)
+    def visit_Break(self, stmt: ast.Break):
+        raise Break()
+
+    def visit_Continue(self, stmt: ast.Continue):
+        raise Continue()
 
     def visit_While(self, stmt: ast.While):
         while self.is_truthy(self.evaluate(stmt.condition)):
@@ -144,7 +150,11 @@ class Interpreter:
     # Expressions
     def visit_Assign(self, expr: ast.Assign):
         value = self.evaluate(expr.value)
-        self.environment.assign(expr.name, value)
+        try:
+            self.environment.assign(expr.name, value)
+        except RuntimeError:
+            # If not defined, define in current scope (Optional declaration)
+            self.environment.define(expr.name.lexeme, value)
         return value
 
     def visit_Binary(self, expr: ast.Binary):
@@ -227,6 +237,16 @@ class Interpreter:
 
     def visit_Get(self, expr: ast.Get):
         object = self.evaluate(expr.object)
+
+        if isinstance(object, str):
+            index = self.evaluate(expr.name)
+            if not isinstance(index, int):
+                raise RuntimeError(expr.bracket, "Index must be an integer.")
+            try:
+                return ord(object[index])
+            except IndexError:
+                raise RuntimeError(expr.bracket, "String index out of bounds.")
+
         if not isinstance(object, list):
             raise RuntimeError(expr.bracket, "Only arrays have elements.")
         
@@ -266,9 +286,20 @@ class Interpreter:
             with open(path_str, "w", encoding="utf-8") as f:
                 f.write(content_str)
         except Exception as e:
-            # Report runtime error but don't crash interpreter if possible? 
-            # Or crash? Let's print error
              print(f"Error writing file '{path_str}': {e}", file=sys.stderr)
+
+    def visit_FileAppend(self, stmt: ast.FileAppend):
+        path = self.evaluate(stmt.path)
+        content = self.evaluate(stmt.content)
+
+        path_str = self.stringify(path)
+        content_str = self.stringify(content)
+
+        try:
+            with open(path_str, "a", encoding="utf-8") as f:
+                f.write(content_str)
+        except Exception as e:
+             print(f"Error appending file '{path_str}': {e}", file=sys.stderr)
 
     def visit_FileRead(self, stmt: ast.FileRead):
         path = self.evaluate(stmt.path)
@@ -324,6 +355,15 @@ class JaeumCallable:
         pass
     def arity(self) -> int:
         pass
+
+class BuiltIn(JaeumCallable):
+    def __init__(self, func, arity_val):
+        self.func = func
+        self.arity_val = arity_val
+    def call(self, interpreter, arguments):
+        return self.func(arguments)
+    def arity(self):
+        return self.arity_val
 
 class JaeumFunction(JaeumCallable):
     def __init__(self, declaration: ast.Function, closure: Environment):

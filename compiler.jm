@@ -1,0 +1,1129 @@
+// Jaeumeo Compiler in Jaeumeo (Bootstrapping) - Optimized File I/O + Escape
+
+// Constants (Token Types)
+T_EOF = 0;
+T_ID = 1;
+T_NUM = 2;
+T_STR = 3;
+T_VAR = 4; // ㅄ
+T_FUNC = 5; // ㅎㅅ
+T_PRINT = 6; // ㅊㄹ
+T_LPAREN = 7; // (
+T_RPAREN = 8; // )
+T_LBRACE = 9; // {
+T_RBRACE = 10; // }
+T_SEMI = 11; // ;
+T_EQ = 12; // =
+T_PLUS = 13; // +
+T_MINUS = 14; // -
+T_STAR = 15; // *
+T_SLASH = 16; // /
+T_COMMA = 17; // ,
+T_LBRACKET = 18; // [
+T_RBRACKET = 19; // ]
+T_RETURN = 20; // ㄹㅌ
+T_IF = 21; // ㄹㅇ
+T_WHILE = 22; // ㅂㅂ1
+T_LT = 23; // <
+T_GT = 24; // >
+T_EQEQ = 25; // ==
+T_BANGEQ = 26; // !=
+T_LTEQ = 27; // <=
+T_GTEQ = 28; // >=
+T_FREAD = 29; // ㅍㅇㅇㄹ
+T_FWRITE = 30; // ㅍㅇㅊㄹ
+T_FAPPEND = 31; // ㅍㅇㅊㄱ
+
+// Global Variables
+소스 = "";
+토큰들 = 준비(30000); // Increased buffer
+토큰수 = 0;
+현재토큰 = 0;
+
+전역변수목록 = 준비(1000);
+전역변수개수 = 0;
+
+// Symbol Table
+지역변수목록 = 준비(100);
+지역변수오프셋 = 준비(100);
+지역변수개수 = 0;
+파라미터목록 = 준비(20);
+파라미터개수 = 0;
+현재오프셋 = 0;
+
+라벨번호 = 0;
+ㅎㅅ 새라벨() {
+    라벨번호 = 라벨번호 + 1;
+    ㄹㅌ 문자연결("L", 문자열변환(라벨번호));
+}
+
+// Helper: Append Token
+ㅎㅅ 토큰추가(type, lexeme, literal) {
+    t = 준비(3);
+    t[0] = type;
+    t[1] = lexeme;
+    t[2] = literal;
+    토큰들[토큰수] = t;
+    토큰수 = 토큰수 + 1;
+}
+
+// Helpers
+ㅎㅅ 알파벳이냐(c) {
+    ㄹㅇ (c >= 97) { ㄹㅇ (c <= 122) { ㄹㅌ 1; } }
+    ㄹㅇ (c >= 65) { ㄹㅇ (c <= 90) { ㄹㅌ 1; } }
+    ㄹㅇ (c == 95) { ㄹㅌ 1; }
+    ㄹㅇ (c > 128) { ㄹㅌ 1; }
+    ㄹㅌ 0;
+}
+
+ㅎㅅ 숫자냐(c) {
+    ㄹㅇ (c >= 48) { ㄹㅇ (c <= 57) { ㄹㅌ 1; } }
+    ㄹㅌ 0;
+}
+
+ㅎㅅ 자르기(s, start, len) {
+    res = "";
+    i = 0;
+    ㅂㅂ1 (i < len) {
+        res = 문자연결(res, 문자(문자읽기(s, start + i)));
+        i = i + 1;
+    }
+    ㄹㅌ res;
+}
+
+ㅎㅅ 문자열_정수로(s) {
+    len = 길이(s);
+    res = 0;
+    i = 0;
+    ㅂㅂ1 (i < len) {
+       c = 문자읽기(s, i);
+       res = res * 10 + (c - 48);
+       i = i + 1;
+    }
+    ㄹㅌ res;
+}
+
+// Symbol Table
+ㅎㅅ 전역변수등록(name) {
+    i = 0;
+    ㅂㅂ1 (i < 전역변수개수) {
+        ㄹㅇ (전역변수목록[i] == name) { ㄹㅌ 0; }
+        i = i + 1;
+    }
+    전역변수목록[전역변수개수] = name;
+    전역변수개수 = 전역변수개수 + 1;
+}
+
+ㅎㅅ 지역변수등록(name) {
+    i = 0;
+    ㅂㅂ1 (i < 지역변수개수) {
+        ㄹㅇ (지역변수목록[i] == name) { ㄹㅌ 0; }
+        i = i + 1;
+    }
+    i = 0;
+    ㅂㅂ1 (i < 파라미터개수) {
+        ㄹㅇ (파라미터목록[i] == name) { ㄹㅌ 0; }
+        i = i + 1;
+    }
+
+    지역변수목록[지역변수개수] = name;
+    현재오프셋 = 현재오프셋 + 8;
+    지역변수오프셋[지역변수개수] = 현재오프셋;
+    지역변수개수 = 지역변수개수 + 1;
+}
+
+ㅎㅅ 변수존재확인(name) {
+    i = 0;
+    ㅂㅂ1 (i < 지역변수개수) {
+        ㄹㅇ (지역변수목록[i] == name) { ㄹㅌ 1; }
+        i = i + 1;
+    }
+    i = 0;
+    ㅂㅂ1 (i < 파라미터개수) {
+        ㄹㅇ (파라미터목록[i] == name) { ㄹㅌ 1; }
+        i = i + 1;
+    }
+    i = 0;
+    ㅂㅂ1 (i < 전역변수개수) {
+        ㄹㅇ (전역변수목록[i] == name) { ㄹㅌ 1; }
+        i = i + 1;
+    }
+    ㄹㅌ 0;
+}
+
+ㅎㅅ 변수위치찾기(name) {
+    i = 0;
+    ㅂㅂ1 (i < 지역변수개수) {
+        ㄹㅇ (지역변수목록[i] == name) {
+            off = 지역변수오프셋[i];
+            ㄹㅌ 문자연결(문자연결("[rbp - ", 문자열변환(off)), "]");
+        }
+        i = i + 1;
+    }
+    i = 0;
+    ㅂㅂ1 (i < 파라미터개수) {
+        ㄹㅇ (파라미터목록[i] == name) {
+            off = 16 + (i * 8);
+            ㄹㅌ 문자연결(문자연결("[rbp + ", 문자열변환(off)), "]");
+        }
+        i = i + 1;
+    }
+    ㄹㅌ 문자연결(문자연결("[var_", name), "]");
+}
+
+// Lexer
+ㅎㅅ 렉서() {
+    i = 0;
+    len = 길이(소스);
+
+    ㅂㅂ1 (i < len) {
+        c = 문자읽기(소스, i);
+
+        ㄹㅇ (c == 32) { i = i + 1; ㄹㄹ; }
+        ㄹㅇ (c == 10) { i = i + 1; ㄹㄹ; }
+        ㄹㅇ (c == 13) { i = i + 1; ㄹㄹ; }
+
+        ㄹㅇ (c == 40) { 토큰추가(T_LPAREN, "(", 0); i = i + 1; ㄹㄹ; }
+        ㄹㅇ (c == 41) { 토큰추가(T_RPAREN, ")", 0); i = i + 1; ㄹㄹ; }
+        ㄹㅇ (c == 123) { 토큰추가(T_LBRACE, "{", 0); i = i + 1; ㄹㄹ; }
+        ㄹㅇ (c == 125) { 토큰추가(T_RBRACE, "}", 0); i = i + 1; ㄹㄹ; }
+        ㄹㅇ (c == 91) { 토큰추가(T_LBRACKET, "[", 0); i = i + 1; ㄹㄹ; }
+        ㄹㅇ (c == 93) { 토큰추가(T_RBRACKET, "]", 0); i = i + 1; ㄹㄹ; }
+        ㄹㅇ (c == 59) { 토큰추가(T_SEMI, ";", 0); i = i + 1; ㄹㄹ; }
+        ㄹㅇ (c == 44) { 토큰추가(T_COMMA, ",", 0); i = i + 1; ㄹㄹ; }
+        ㄹㅇ (c == 43) { 토큰추가(T_PLUS, "+", 0); i = i + 1; ㄹㄹ; }
+        ㄹㅇ (c == 45) { 토큰추가(T_MINUS, "-", 0); i = i + 1; ㄹㄹ; }
+        ㄹㅇ (c == 42) { 토큰추가(T_STAR, "*", 0); i = i + 1; ㄹㄹ; }
+
+        ㄹㅇ (c == 47) {
+            ㄹㅇ (i + 1 < len) {
+                ㄹㅇ (문자읽기(소스, i+1) == 47) {
+                     i = i + 2;
+                     ㅂㅂ1 (i < len) {
+                         ㄹㅇ (문자읽기(소스, i) == 10) { ㅃ; }
+                         i = i + 1;
+                     }
+                     ㄹㄹ;
+                }
+            }
+            토큰추가(T_SLASH, "/", 0); i = i + 1; ㄹㄹ;
+        }
+
+        ㄹㅇ (c == 61) {
+            ㄹㅇ (i + 1 < len) {
+                ㄹㅇ (문자읽기(소스, i+1) == 61) {
+                    토큰추가(T_EQEQ, "==", 0); i = i + 2; ㄹㄹ;
+                }
+            }
+            토큰추가(T_EQ, "=", 0); i = i + 1; ㄹㄹ;
+        }
+
+        ㄹㅇ (c == 33) {
+            ㄹㅇ (i + 1 < len) {
+                ㄹㅇ (문자읽기(소스, i+1) == 61) {
+                    토큰추가(T_BANGEQ, "!=", 0); i = i + 2; ㄹㄹ;
+                }
+            }
+            i = i + 1; ㄹㄹ;
+        }
+
+        ㄹㅇ (c == 60) {
+            ㄹㅇ (i + 1 < len) {
+                ㄹㅇ (문자읽기(소스, i+1) == 61) {
+                    토큰추가(T_LTEQ, "<=", 0); i = i + 2; ㄹㄹ;
+                }
+            }
+            토큰추가(T_LT, "<", 0); i = i + 1; ㄹㄹ;
+        }
+
+        ㄹㅇ (c == 62) {
+            ㄹㅇ (i + 1 < len) {
+                ㄹㅇ (문자읽기(소스, i+1) == 61) {
+                    토큰추가(T_GTEQ, ">=", 0); i = i + 2; ㄹㄹ;
+                }
+            }
+            토큰추가(T_GT, ">", 0); i = i + 1; ㄹㄹ;
+        }
+
+        // String with escape support
+        ㄹㅇ (c == 34) {
+            i = i + 1;
+            res = "";
+            ㅂㅂ1 (문자읽기(소스, i) != 34) {
+                cc = 문자읽기(소스, i);
+                ㄹㅇ (cc == 92) { // Backslash
+                    i = i + 1;
+                    cc = 문자읽기(소스, i);
+                    // Handle escapes
+                    ㄹㅇ (cc == 110) { res = 문자연결(res, "\n"); } // n
+                    ㄹㅇ (cc == 114) { res = 문자연결(res, "\r"); } // r
+                    ㄹㅇ (cc == 116) { res = 문자연결(res, "\t"); } // t
+                    ㄹㅇ (cc == 34)  { res = 문자연결(res, "\""); } // "
+                    ㄹㅇ (cc == 92)  { res = 문자연결(res, "\\"); } // \
+                } ㄴㄴ {
+                    res = 문자연결(res, 문자(cc));
+                }
+                i = i + 1;
+            }
+            토큰추가(T_STR, res, res);
+            i = i + 1;
+            ㄹㄹ;
+        }
+
+        ㄹㅇ (숫자냐(c)) {
+            start = i;
+            ㅂㅂ1 (숫자냐(문자읽기(소스, i))) {
+                i = i + 1;
+            }
+            num_str = 자르기(소스, start, i - start);
+            val = 문자열_정수로(num_str);
+            토큰추가(T_NUM, num_str, val);
+            ㄹㄹ;
+        }
+
+        start = i;
+        ㅂㅂ1 (문자읽기(소스, i) != 32) {
+             c = 문자읽기(소스, i);
+             ㄹㅇ (c == 40) { ㅃ; }
+             ㄹㅇ (c == 41) { ㅃ; }
+             ㄹㅇ (c == 123) { ㅃ; }
+             ㄹㅇ (c == 125) { ㅃ; }
+             ㄹㅇ (c == 59) { ㅃ; }
+             ㄹㅇ (c == 61) { ㅃ; }
+             ㄹㅇ (c == 91) { ㅃ; }
+             ㄹㅇ (c == 93) { ㅃ; }
+             ㄹㅇ (c == 44) { ㅃ; }
+             ㄹㅇ (c == 10) { ㅃ; }
+             ㄹㅇ (c == 43) { ㅃ; }
+             ㄹㅇ (c == 45) { ㅃ; }
+             ㄹㅇ (c == 42) { ㅃ; }
+             ㄹㅇ (c == 47) { ㅃ; }
+             ㄹㅇ (c == 60) { ㅃ; }
+             ㄹㅇ (c == 62) { ㅃ; }
+             ㄹㅇ (c == 33) { ㅃ; }
+             i = i + 1;
+             ㄹㅇ (i >= len) { ㅃ; }
+        }
+
+        txt = 자르기(소스, start, i - start);
+
+        type = T_ID;
+        ㄹㅇ (txt == "ㅎㅅ") { type = T_FUNC; }
+        ㄹㅇ (txt == "ㅊㄹ") { type = T_PRINT; }
+        ㄹㅇ (txt == "ㄹㅌ") { type = T_RETURN; }
+        ㄹㅇ (txt == "ㄹㅇ") { type = T_IF; }
+        ㄹㅇ (txt == "ㅂㅂ1") { type = T_WHILE; }
+        ㄹㅇ (txt == "ㅍㅇㅇㄹ") { type = T_FREAD; }
+        ㄹㅇ (txt == "ㅍㅇㅊㄹ") { type = T_FWRITE; }
+        ㄹㅇ (txt == "ㅍㅇㅊㄱ") { type = T_FAPPEND; }
+
+        토큰추가(type, txt, 0);
+    }
+    토큰추가(T_EOF, "", 0);
+}
+
+// Code Generator - File based
+모드_메인 = 0; // 0: output.asm, 1: main.tmp
+
+ㅎㅅ 파일쓰기(file, line) {
+    ㅍㅇㅊㄱ(file, line);
+    ㅍㅇㅊㄱ(file, "\n");
+}
+
+ㅎㅅ 방출_TEXT(line) {
+    ㄹㅇ (모드_메인 == 1) {
+        파일쓰기("main.tmp", line);
+    } ㄴㄴ {
+        파일쓰기("output.asm", line);
+    }
+}
+ㅎㅅ 방출_DATA(line) {
+    파일쓰기("data.tmp", line);
+}
+ㅎㅅ 방출_BSS(line) {
+    파일쓰기("bss.tmp", line);
+}
+
+// Parser
+ㅎㅅ 매치(type) {
+    t = 토큰들[현재토큰];
+    ㄹㅇ (t[0] == type) {
+        현재토큰 = 현재토큰 + 1;
+        ㄹㅌ 1;
+    }
+    ㄹㅌ 0;
+}
+
+ㅎㅅ 소비(type) {
+    ㄹㅇ (매치(type)) { ㄹㅌ 1; }
+    ㅊㄹ("Error: Expected token");
+    ㅊㄹ(type);
+    // Panic break (rely on loop checking EOF or exception)
+    // We cannot raise exception easily.
+    // Force EOF?
+    // 토큰들[현재토큰] = [T_EOF, "", 0];
+    // No, loop continues.
+    // Just return 0.
+    ㄹㅌ 0;
+}
+
+ㅎㅅ 픽() {
+    // Check bounds?
+    ㄹㅇ (현재토큰 >= 토큰수) { ㄹㅌ T_EOF; }
+    ㄹㅌ 토큰들[현재토큰][0];
+}
+
+ㅎㅅ 프로그램() {
+    // Clear files
+    ㅍㅇㅊㄹ("output.asm", "");
+    ㅍㅇㅊㄹ("main.tmp", "");
+    ㅍㅇㅊㄹ("data.tmp", "");
+    ㅍㅇㅊㄹ("bss.tmp", "");
+
+    방출_TEXT("section .text");
+    방출_TEXT("global Start");
+    방출_TEXT("extern ExitProcess");
+    방출_TEXT("extern printf");
+    방출_TEXT("extern malloc");
+    방출_TEXT("extern strlen");
+    방출_TEXT("extern strcpy");
+    방출_TEXT("extern strcat");
+    방출_TEXT("extern sprintf");
+    방출_TEXT("extern fopen");
+    방출_TEXT("extern fprintf");
+    방출_TEXT("extern fclose");
+    방출_TEXT("extern fseek");
+    방출_TEXT("extern ftell");
+    방출_TEXT("extern rewind");
+    방출_TEXT("extern fread");
+
+    방출_TEXT("Start:");
+    방출_TEXT("    sub rsp, 40");
+
+    l_main = 새라벨();
+    방출_TEXT(문자연결("    jmp ", l_main));
+
+    // Parse
+    ㅂㅂ1 (픽() != T_EOF) {
+        ㄹㅇ (픽() == T_FUNC) {
+            모드_메인 = 0;
+            함수정의();
+        } ㄴㄴ {
+            모드_메인 = 1;
+            문장();
+        }
+    }
+
+    // Switch to output.asm to finish
+    모드_메인 = 0;
+    방출_TEXT(문자연결(l_main, ":"));
+
+    // Append main.tmp
+    main_content = "";
+    ㅍㅇㅇㄹ(main_content, "main.tmp");
+    ㄹㅇ (main_content != "ㄴㄴㄴ") { // Check if valid
+         ㅍㅇㅊㄱ("output.asm", main_content);
+    }
+
+    방출_TEXT("    xor rcx, rcx");
+    방출_TEXT("    call ExitProcess");
+
+    // Data
+    방출_DATA("section .data");
+    방출_DATA("    fmt_int db \"%lld\", 10, 0");
+    방출_DATA("    fmt_int_simple db \"%lld\", 0");
+    방출_DATA("    fmt_str db \"%s\", 10, 0");
+    방출_DATA("    mode_r db \"rb\", 0");
+    방출_DATA("    mode_w db \"w\", 0");
+    방출_DATA("    mode_a db \"a\", 0");
+
+    // Append Data
+    data_content = "";
+    ㅍㅇㅇㄹ(data_content, "data.tmp");
+    ㄹㅇ (data_content != "ㄴㄴㄴ") {
+        ㅍㅇㅊㄱ("output.asm", data_content);
+    }
+
+    // BSS
+    방출_BSS("section .bss");
+    i = 0;
+    ㅂㅂ1 (i < 전역변수개수) {
+        방출_BSS(문자연결(문자연결("    var_", 전역변수목록[i]), " resq 1"));
+        i = i + 1;
+    }
+
+    // Append BSS
+    bss_content = "";
+    ㅍㅇㅇㄹ(bss_content, "bss.tmp");
+    ㄹㅇ (bss_content != "ㄴㄴㄴ") {
+        ㅍㅇㅊㄱ("output.asm", bss_content);
+    }
+}
+
+ㅎㅅ 함수정의() {
+    소비(T_FUNC);
+    name = 토큰들[현재토큰][1];
+    소비(T_ID);
+    소비(T_LPAREN);
+
+    지역변수개수 = 0;
+    현재오프셋 = 0;
+    파라미터개수 = 0;
+
+    ㄹㅇ (픽() != T_RPAREN) {
+        ㅂㅂ1 (1) {
+            pname = 토큰들[현재토큰][1];
+            소비(T_ID);
+            파라미터목록[파라미터개수] = pname;
+            파라미터개수 = 파라미터개수 + 1;
+            ㄹㅇ (매치(T_COMMA) == 0) { ㅃ; }
+        }
+    }
+    소비(T_RPAREN);
+    소비(T_LBRACE);
+
+    방출_TEXT(문자연결(문자연결("func_", name), ":"));
+    방출_TEXT("    push rbp");
+    방출_TEXT("    mov rbp, rsp");
+    방출_TEXT("    sub rsp, 1024");
+
+    블록내부();
+
+    방출_TEXT("    xor rax, rax");
+    방출_TEXT("    mov rsp, rbp");
+    방출_TEXT("    pop rbp");
+    방출_TEXT("    ret");
+}
+
+ㅎㅅ 블록() {
+    소비(T_LBRACE);
+    블록내부();
+}
+
+ㅎㅅ 블록내부() {
+    ㅂㅂ1 (픽() != T_RBRACE) {
+        ㄹㅇ (픽() == T_EOF) { ㅃ; }
+        문장();
+    }
+    소비(T_RBRACE);
+}
+
+ㅎㅅ 문장() {
+    t = 픽();
+
+    ㄹㅇ (t == T_PRINT) {
+        소비(T_PRINT);
+        소비(T_LPAREN);
+        표현식();
+        소비(T_RPAREN);
+        소비(T_SEMI);
+
+        방출_TEXT("    lea rcx, [fmt_int]");
+        방출_TEXT("    mov rdx, rax");
+        방출_TEXT("    call printf");
+        ㄹㅌ 0;
+    }
+
+    ㄹㅇ (t == T_IF) {
+        소비(T_IF);
+        소비(T_LPAREN);
+        표현식();
+        소비(T_RPAREN);
+
+        l_else = 새라벨();
+        l_end = 새라벨();
+
+        방출_TEXT("    cmp rax, 0");
+        방출_TEXT(문자연결("    je ", l_else));
+
+        블록();
+        방출_TEXT(문자연결("    jmp ", l_end));
+
+        방출_TEXT(문자연결(l_else, ":"));
+        방출_TEXT(문자연결(l_end, ":"));
+        ㄹㅌ 0;
+    }
+
+    ㄹㅇ (t == T_WHILE) {
+        소비(T_WHILE);
+        소비(T_LPAREN);
+
+        l_start = 새라벨();
+        l_end = 새라벨();
+
+        방출_TEXT(문자연결(l_start, ":"));
+        표현식();
+        소비(T_RPAREN);
+
+        방출_TEXT("    cmp rax, 0");
+        방출_TEXT(문자연결("    je ", l_end));
+
+        블록();
+        방출_TEXT(문자연결("    jmp ", l_start));
+        방출_TEXT(문자연결(l_end, ":"));
+        ㄹㅌ 0;
+    }
+
+    ㄹㅇ (t == T_RETURN) {
+        소비(T_RETURN);
+        표현식();
+        소비(T_SEMI);
+
+        방출_TEXT("    mov rsp, rbp");
+        방출_TEXT("    pop rbp");
+        방출_TEXT("    ret");
+        ㄹㅌ 0;
+    }
+
+    ㄹㅇ (t == T_FREAD) {
+        소비(T_FREAD);
+        소비(T_LPAREN);
+        name = 토큰들[현재토큰][1];
+        소비(T_ID);
+        소비(T_COMMA);
+        표현식(); // Path
+        소비(T_RPAREN);
+        소비(T_SEMI);
+
+        // Path in RAX.
+        방출_TEXT("    mov rcx, rax");
+        방출_TEXT("    lea rdx, [mode_r]");
+        방출_TEXT("    sub rsp, 32");
+        방출_TEXT("    call fopen");
+        방출_TEXT("    add rsp, 32");
+        방출_TEXT("    mov rbx, rax");
+
+        방출_TEXT("    mov rcx, rbx");
+        방출_TEXT("    mov rdx, 0");
+        방출_TEXT("    mov r8, 2");
+        방출_TEXT("    sub rsp, 32");
+        방출_TEXT("    call fseek");
+        방출_TEXT("    add rsp, 32");
+
+        방출_TEXT("    mov rcx, rbx");
+        방출_TEXT("    sub rsp, 32");
+        방출_TEXT("    call ftell");
+        방출_TEXT("    add rsp, 32");
+        방출_TEXT("    mov r12, rax");
+
+        방출_TEXT("    mov rcx, rbx");
+        방출_TEXT("    sub rsp, 32");
+        방출_TEXT("    call rewind");
+        방출_TEXT("    add rsp, 32");
+
+        방출_TEXT("    mov rcx, r12");
+        방출_TEXT("    add rcx, 1");
+        방출_TEXT("    sub rsp, 32");
+        방출_TEXT("    call malloc");
+        방출_TEXT("    add rsp, 32");
+        방출_TEXT("    mov r13, rax");
+
+        방출_TEXT("    mov rcx, r13");
+        방출_TEXT("    mov rdx, 1");
+        방출_TEXT("    mov r8, r12");
+        방출_TEXT("    mov r9, rbx");
+        방출_TEXT("    sub rsp, 32");
+        방출_TEXT("    call fread");
+        방출_TEXT("    add rsp, 32");
+
+        방출_TEXT("    mov byte [r13 + r12], 0");
+
+        방출_TEXT("    mov rcx, rbx");
+        방출_TEXT("    sub rsp, 32");
+        방출_TEXT("    call fclose");
+        방출_TEXT("    add rsp, 32");
+
+        // Assign r13 to var
+        방출_TEXT("    mov rax, r13");
+        loc = 변수위치찾기(name);
+        방출_TEXT(문자연결(문자연결("    mov ", loc), ", rax"));
+        ㄹㅌ 0;
+    }
+
+    ㄹㅇ (t == T_FWRITE) {
+        소비(T_FWRITE);
+        소비(T_LPAREN);
+        표현식(); // Path
+        방출_TEXT("    push rax");
+        소비(T_COMMA);
+        표현식(); // Content
+        소비(T_RPAREN);
+        소비(T_SEMI);
+
+        방출_TEXT("    mov rdx, rax"); // Content
+        방출_TEXT("    pop rcx"); // Path
+
+        // Save regs
+        방출_TEXT("    push rdx");
+
+        방출_TEXT("    lea rdx, [mode_w]");
+        방출_TEXT("    sub rsp, 32");
+        방출_TEXT("    call fopen");
+        방출_TEXT("    add rsp, 32");
+        방출_TEXT("    mov rbx, rax");
+
+        방출_TEXT("    pop rdx"); // Content
+        방출_TEXT("    mov rcx, rbx");
+        방출_TEXT("    sub rsp, 32");
+        방출_TEXT("    call fprintf");
+        방출_TEXT("    add rsp, 32");
+
+        방출_TEXT("    mov rcx, rbx");
+        방출_TEXT("    sub rsp, 32");
+        방출_TEXT("    call fclose");
+        방출_TEXT("    add rsp, 32");
+        ㄹㅌ 0;
+    }
+
+    ㄹㅇ (t == T_FAPPEND) {
+        소비(T_FAPPEND);
+        소비(T_LPAREN);
+        표현식(); // Path
+        방출_TEXT("    push rax");
+        소비(T_COMMA);
+        표현식(); // Content
+        소비(T_RPAREN);
+        소비(T_SEMI);
+
+        방출_TEXT("    mov rdx, rax"); // Content
+        방출_TEXT("    pop rcx"); // Path
+
+        방출_TEXT("    push rdx");
+
+        방출_TEXT("    lea rdx, [mode_a]");
+        방출_TEXT("    sub rsp, 32");
+        방출_TEXT("    call fopen");
+        방출_TEXT("    add rsp, 32");
+        방출_TEXT("    mov rbx, rax");
+
+        방출_TEXT("    pop rdx");
+        방출_TEXT("    mov rcx, rbx");
+        방출_TEXT("    sub rsp, 32");
+        방출_TEXT("    call fprintf");
+        방출_TEXT("    add rsp, 32");
+
+        방출_TEXT("    mov rcx, rbx");
+        방출_TEXT("    sub rsp, 32");
+        방출_TEXT("    call fclose");
+        방출_TEXT("    add rsp, 32");
+        ㄹㅌ 0;
+    }
+
+    ㄹㅇ (t == T_ID) {
+        name = 토큰들[현재토큰][1];
+        소비(T_ID);
+
+        ㄹㅇ (매치(T_EQ)) {
+            // Implicit declaration
+            ㄹㅇ (변수존재확인(name) == 0) {
+                ㄹㅇ (모드_메인 == 1) {
+                    전역변수등록(name);
+                } ㄴㄴ {
+                    지역변수등록(name);
+                }
+            }
+
+            표현식();
+            소비(T_SEMI);
+            loc = 변수위치찾기(name);
+            방출_TEXT(문자연결(문자연결("    mov ", loc), ", rax"));
+            ㄹㅌ 0;
+        }
+
+        ㄹㅇ (매치(T_LBRACKET)) {
+             표현식();
+             방출_TEXT("    push rax");
+             소비(T_RBRACKET);
+             소비(T_EQ);
+             표현식();
+             소비(T_SEMI);
+
+             방출_TEXT("    mov rbx, rax");
+             방출_TEXT("    pop rax");
+
+             loc = 변수위치찾기(name);
+             방출_TEXT(문자연결("    mov rdx, ", loc));
+
+             방출_TEXT("    lea rcx, [rdx + rax*8]");
+             방출_TEXT("    mov [rcx], rbx");
+             ㄹㅌ 0;
+        }
+
+        ㄹㅇ (매치(T_LPAREN)) {
+             cnt = 0;
+             ㄹㅇ (픽() != T_RPAREN) {
+                ㅂㅂ1 (1) {
+                    표현식();
+                    방출_TEXT("    push rax");
+                    cnt = cnt + 1;
+                    ㄹㅇ (매치(T_COMMA) == 0) { ㅃ; }
+                }
+            }
+            소비(T_RPAREN);
+            소비(T_SEMI);
+
+            i = cnt;
+            ㅂㅂ1 (i > 0) {
+                 ㄹㅇ (i == 1) { 방출_TEXT("    pop rcx"); }
+                 ㄹㅇ (i == 2) { 방출_TEXT("    pop rdx"); }
+                 ㄹㅇ (i == 3) { 방출_TEXT("    pop r8"); }
+                 ㄹㅇ (i == 4) { 방출_TEXT("    pop r9"); }
+                 i = i - 1;
+            }
+
+            ㄹㅇ (name == "준비") {
+                 방출_TEXT("    imul rcx, 8");
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call malloc");
+                 방출_TEXT("    add rsp, 32");
+            } ㄹㅇ (name == "길이") {
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call strlen");
+                 방출_TEXT("    add rsp, 32");
+            } ㄹㅇ (name == "문자읽기") {
+                 방출_TEXT("    add rcx, rdx");
+                 방출_TEXT("    movzx rax, byte [rcx]");
+            } ㄹㅇ (name == "문자연결") {
+                 방출_TEXT("    push rcx");
+                 방출_TEXT("    push rdx");
+
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call strlen");
+                 방출_TEXT("    add rsp, 32");
+                 방출_TEXT("    mov r8, rax");
+
+                 방출_TEXT("    mov rcx, [rsp]");
+                 방출_TEXT("    push r8");
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call strlen");
+                 방출_TEXT("    add rsp, 32");
+
+                 방출_TEXT("    pop r8");
+                 방출_TEXT("    add r8, rax");
+                 방출_TEXT("    inc r8");
+
+                 방출_TEXT("    mov rcx, r8");
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call malloc");
+                 방출_TEXT("    add rsp, 32");
+                 방출_TEXT("    mov r9, rax");
+
+                 방출_TEXT("    mov rcx, r9");
+                 방출_TEXT("    mov rdx, [rsp + 8]");
+                 방출_TEXT("    push r9");
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call strcpy");
+                 방출_TEXT("    add rsp, 32");
+
+                 방출_TEXT("    mov rcx, [rsp]");
+                 방출_TEXT("    mov rdx, [rsp + 16]");
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call strcat");
+                 방출_TEXT("    add rsp, 32");
+
+                 방출_TEXT("    pop rax");
+                 방출_TEXT("    add rsp, 16");
+            } ㄹㅇ (name == "문자열변환") {
+                 방출_TEXT("    push rcx");
+                 방출_TEXT("    mov rcx, 32");
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call malloc");
+                 방출_TEXT("    add rsp, 32");
+                 방출_TEXT("    mov rdx, rax");
+
+                 방출_TEXT("    pop r8");
+                 방출_TEXT("    mov rcx, rdx");
+                 방출_TEXT("    lea rdx, [fmt_int_simple]");
+                 방출_TEXT("    push rcx");
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call sprintf");
+                 방출_TEXT("    add rsp, 32");
+                 방출_TEXT("    pop rax");
+            } ㄴㄴ {
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT(문자연결("    call func_", name));
+                 방출_TEXT("    add rsp, 32");
+            }
+            ㄹㅌ 0;
+        }
+
+        ㄹㅇ (매치(T_LBRACKET)) {
+             표현식();
+             소비(T_RBRACKET);
+
+             방출_TEXT("    mov rbx, rax");
+
+             loc = 변수위치찾기(name);
+             방출_TEXT(문자연결("    mov rax, ", loc));
+
+             방출_TEXT("    lea rcx, [rax + rbx*8]");
+             방출_TEXT("    mov rax, [rcx]");
+             ㄹㅌ 0;
+        } ㄴㄴ {
+             loc = 변수위치찾기(name);
+             방출_TEXT(문자연결("    mov rax, ", loc));
+        }
+    }
+
+    ㄹㅇ (t == T_LPAREN) {
+        소비(T_LPAREN);
+        표현식();
+        소비(T_RPAREN);
+    }
+}
+
+ㅎㅅ 표현식() {
+    비교식();
+}
+
+ㅎㅅ 비교식() {
+    항();
+    ㅂㅂ1 (1) {
+        ㄹㅇ (매치(T_EQEQ)) {
+            방출_TEXT("    push rax");
+            항();
+            방출_TEXT("    mov rbx, rax");
+            방출_TEXT("    pop rax");
+            방출_TEXT("    cmp rax, rbx");
+            방출_TEXT("    sete al");
+            방출_TEXT("    movzx rax, al");
+        } ㄹㅇ (매치(T_BANGEQ)) {
+            방출_TEXT("    push rax");
+            항();
+            방출_TEXT("    mov rbx, rax");
+            방출_TEXT("    pop rax");
+            방출_TEXT("    cmp rax, rbx");
+            방출_TEXT("    setne al");
+            방출_TEXT("    movzx rax, al");
+        } ㄴㄴ {
+             ㄹㅇ (매치(T_LT)) {
+                방출_TEXT("    push rax");
+                항();
+                방출_TEXT("    mov rbx, rax");
+                방출_TEXT("    pop rax");
+                방출_TEXT("    cmp rax, rbx");
+                방출_TEXT("    setl al");
+                방출_TEXT("    movzx rax, al");
+             } ㄹㅇ (매치(T_LTEQ)) {
+                방출_TEXT("    push rax");
+                항();
+                방출_TEXT("    mov rbx, rax");
+                방출_TEXT("    pop rax");
+                방출_TEXT("    cmp rax, rbx");
+                방출_TEXT("    setle al");
+                방출_TEXT("    movzx rax, al");
+             } ㄹㅇ (매치(T_GT)) {
+                방출_TEXT("    push rax");
+                항();
+                방출_TEXT("    mov rbx, rax");
+                방출_TEXT("    pop rax");
+                방출_TEXT("    cmp rax, rbx");
+                방출_TEXT("    setg al");
+                방출_TEXT("    movzx rax, al");
+             } ㄹㅇ (매치(T_GTEQ)) {
+                방출_TEXT("    push rax");
+                항();
+                방출_TEXT("    mov rbx, rax");
+                방출_TEXT("    pop rax");
+                방출_TEXT("    cmp rax, rbx");
+                방출_TEXT("    setge al");
+                방출_TEXT("    movzx rax, al");
+             } ㄴㄴ {
+                 ㅃ;
+             }
+        }
+    }
+}
+
+ㅎㅅ 항() {
+    곱셈식();
+    ㅂㅂ1 (1) {
+        ㄹㅇ (매치(T_PLUS)) {
+            방출_TEXT("    push rax");
+            곱셈식();
+            방출_TEXT("    mov rbx, rax");
+            방출_TEXT("    pop rax");
+            방출_TEXT("    add rax, rbx");
+        } ㄹㅇ (매치(T_MINUS)) {
+            방출_TEXT("    push rax");
+            곱셈식();
+            방출_TEXT("    mov rbx, rax");
+            방출_TEXT("    pop rax");
+            방출_TEXT("    sub rax, rbx");
+        } ㄴㄴ {
+            ㅃ;
+        }
+    }
+}
+
+ㅎㅅ 곱셈식() {
+    인자();
+    ㅂㅂ1 (1) {
+        ㄹㅇ (매치(T_STAR)) {
+            방출_TEXT("    push rax");
+            인자();
+            방출_TEXT("    mov rbx, rax");
+            방출_TEXT("    pop rax");
+            방출_TEXT("    imul rax, rbx");
+        } ㄹㅇ (매치(T_SLASH)) {
+            방출_TEXT("    push rax");
+            인자();
+            방출_TEXT("    mov rbx, rax");
+            방출_TEXT("    pop rax");
+            방출_TEXT("    cqo");
+            방출_TEXT("    idiv rbx");
+        } ㄴㄴ {
+            ㅃ;
+        }
+    }
+}
+
+ㅎㅅ 인자() {
+    t = 픽();
+
+    ㄹㅇ (t == T_NUM) {
+        val = 토큰들[현재토큰][2];
+        소비(T_NUM);
+        방출_TEXT(문자연결("    mov rax, ", 문자열변환(val)));
+    }
+
+    ㄹㅇ (t == T_STR) {
+         val = 토큰들[현재토큰][2];
+         소비(T_STR);
+         l_str = 새라벨();
+         방출_DATA(문자연결(l_str, ":"));
+         방출_DATA(문자연결(문자연결("    db \"", val), "\", 0"));
+         방출_TEXT(문자연결(문자연결("    lea rax, [", l_str), "]"));
+    }
+
+    ㄹㅇ (t == T_ID) {
+        name = 토큰들[현재토큰][1];
+        소비(T_ID);
+
+        ㄹㅇ (매치(T_LPAREN)) {
+             cnt = 0;
+             ㄹㅇ (픽() != T_RPAREN) {
+                ㅂㅂ1 (1) {
+                    표현식();
+                    방출_TEXT("    push rax");
+                    cnt = cnt + 1;
+                    ㄹㅇ (매치(T_COMMA) == 0) { ㅃ; }
+                }
+            }
+            소비(T_RPAREN);
+
+            i = cnt;
+            ㅂㅂ1 (i > 0) {
+                 ㄹㅇ (i == 1) { 방출_TEXT("    pop rcx"); }
+                 ㄹㅇ (i == 2) { 방출_TEXT("    pop rdx"); }
+                 ㄹㅇ (i == 3) { 방출_TEXT("    pop r8"); }
+                 ㄹㅇ (i == 4) { 방출_TEXT("    pop r9"); }
+                 i = i - 1;
+            }
+
+            ㄹㅇ (name == "준비") {
+                 방출_TEXT("    imul rcx, 8");
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call malloc");
+                 방출_TEXT("    add rsp, 32");
+            } ㄹㅇ (name == "길이") {
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call strlen");
+                 방출_TEXT("    add rsp, 32");
+            } ㄹㅇ (name == "문자읽기") {
+                 방출_TEXT("    add rcx, rdx");
+                 방출_TEXT("    movzx rax, byte [rcx]");
+            } ㄹㅇ (name == "문자연결") {
+                 방출_TEXT("    push rcx");
+                 방출_TEXT("    push rdx");
+
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call strlen");
+                 방출_TEXT("    add rsp, 32");
+                 방출_TEXT("    mov r8, rax");
+
+                 방출_TEXT("    mov rcx, [rsp]");
+                 방출_TEXT("    push r8");
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call strlen");
+                 방출_TEXT("    add rsp, 32");
+
+                 방출_TEXT("    pop r8");
+                 방출_TEXT("    add r8, rax");
+                 방출_TEXT("    inc r8");
+
+                 방출_TEXT("    mov rcx, r8");
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call malloc");
+                 방출_TEXT("    add rsp, 32");
+                 방출_TEXT("    mov r9, rax");
+
+                 방출_TEXT("    mov rcx, r9");
+                 방출_TEXT("    mov rdx, [rsp + 8]");
+                 방출_TEXT("    push r9");
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call strcpy");
+                 방출_TEXT("    add rsp, 32");
+
+                 방출_TEXT("    mov rcx, [rsp]");
+                 방출_TEXT("    mov rdx, [rsp + 16]");
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call strcat");
+                 방출_TEXT("    add rsp, 32");
+
+                 방출_TEXT("    pop rax");
+                 방출_TEXT("    add rsp, 16");
+            } ㄹㅇ (name == "문자열변환") {
+                 방출_TEXT("    push rcx");
+                 방출_TEXT("    mov rcx, 32");
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call malloc");
+                 방출_TEXT("    add rsp, 32");
+                 방출_TEXT("    mov rdx, rax");
+
+                 방출_TEXT("    pop r8");
+                 방출_TEXT("    mov rcx, rdx");
+                 방출_TEXT("    lea rdx, [fmt_int_simple]");
+                 방출_TEXT("    push rcx");
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT("    call sprintf");
+                 방출_TEXT("    add rsp, 32");
+                 방출_TEXT("    pop rax");
+            } ㄴㄴ {
+                 방출_TEXT("    sub rsp, 32");
+                 방출_TEXT(문자연결("    call func_", name));
+                 방출_TEXT("    add rsp, 32");
+            }
+            ㄹㅌ 0;
+        }
+
+        ㄹㅇ (매치(T_LBRACKET)) {
+             표현식();
+             소비(T_RBRACKET);
+
+             방출_TEXT("    mov rbx, rax");
+
+             loc = 변수위치찾기(name);
+             방출_TEXT(문자연결("    mov rax, ", loc));
+
+             방출_TEXT("    lea rcx, [rax + rbx*8]");
+             방출_TEXT("    mov rax, [rcx]");
+             ㄹㅌ 0;
+        } ㄴㄴ {
+             loc = 변수위치찾기(name);
+             방출_TEXT(문자연결("    mov rax, ", loc));
+        }
+    }
+
+    ㄹㅇ (t == T_LPAREN) {
+        소비(T_LPAREN);
+        표현식();
+        소비(T_RPAREN);
+    }
+}
+
+소스 = "";
+ㅍㅇㅇㄹ(소스, "input.jm");
+렉서();
+프로그램();
+ㅊㄹ("Compilation Complete");

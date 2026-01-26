@@ -38,7 +38,14 @@ class Lexer:
         if c == '+': self.add_token(TokenType.PLUS); return
         if c == '-': self.add_token(TokenType.MINUS); return
         if c == '*': self.add_token(TokenType.STAR); return
-        if c == '/': self.add_token(TokenType.SLASH); return
+        if c == '/':
+            if self.match('/'):
+                # Comment
+                while self.peek() != '\n' and not self.is_at_end():
+                    self.advance()
+            else:
+                self.add_token(TokenType.SLASH)
+            return
         if c == '%': self.add_token(TokenType.PERCENT); return
 
         # One or two character tokens
@@ -101,17 +108,29 @@ class Lexer:
         self.add_token(TokenType.NUMBER, int(self.source[self.start:self.current]))
 
     def string(self):
-        while self.peek() != '"' and not self.is_at_end():
-            if self.peek() == '\n': self.line += 1
-            self.advance()
+        value = ""
+        while not self.is_at_end() and self.peek() != '"':
+            c = self.advance()
+            if c == '\n':
+                self.line += 1
+
+            if c == '\\':
+                if not self.is_at_end():
+                    escaped = self.advance()
+                    if escaped == 'n': value += '\n'
+                    elif escaped == 'r': value += '\r'
+                    elif escaped == 't': value += '\t'
+                    elif escaped == '"': value += '"'
+                    elif escaped == '\\': value += '\\'
+                    else: value += escaped
+            else:
+                value += c
         
         if self.is_at_end():
             self.error("Unterminated string")
             return
         
         self.advance() # Closing "
-        
-        value = self.source[self.start+1 : self.current-1]
         self.add_token(TokenType.STRING, value)
 
     def match(self, expected):

@@ -10,25 +10,24 @@ from jaeum.tokens import TokenType
 
 class TestLexer(unittest.TestCase):
     def test_basic_assignment(self):
-        source = 'ㅄ x = 10;'
+        source = 'x = 10;'
         lexer = Lexer(source)
         tokens = lexer.scan_tokens()
         
-        self.assertEqual(tokens[0].type, TokenType.VAR)
-        self.assertEqual(tokens[1].type, TokenType.IDENTIFIER)
-        self.assertEqual(tokens[1].lexeme, 'x')
-        self.assertEqual(tokens[2].type, TokenType.EQUAL)
-        self.assertEqual(tokens[3].type, TokenType.NUMBER)
-        self.assertEqual(tokens[3].literal, 10)
-        self.assertEqual(tokens[4].type, TokenType.SEMICOLON)
-        self.assertEqual(tokens[5].type, TokenType.EOF)
+        self.assertEqual(tokens[0].type, TokenType.IDENTIFIER)
+        self.assertEqual(tokens[0].lexeme, 'x')
+        self.assertEqual(tokens[1].type, TokenType.EQUAL)
+        self.assertEqual(tokens[2].type, TokenType.NUMBER)
+        self.assertEqual(tokens[2].literal, 10)
+        self.assertEqual(tokens[3].type, TokenType.SEMICOLON)
+        self.assertEqual(tokens[4].type, TokenType.EOF)
 
     def test_korean_identifiers(self):
-        source = 'ㅄ 점수 = 100;'
+        source = '점수 = 100;'
         lexer = Lexer(source)
         tokens = lexer.scan_tokens()
         
-        self.assertEqual(tokens[1].lexeme, '점수')
+        self.assertEqual(tokens[0].lexeme, '점수')
 
     def test_max_munch_keywords(self):
         # ㄴ (FALSE), ㄴㄴ (ELSE), ㄴㄴㄴ (NULL)

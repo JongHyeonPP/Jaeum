@@ -1,10 +1,10 @@
-ㅄ arr = [1, 2, 3];
+arr = [1, 2, 3];
 ㅊㄹ(arr);
 ㅊㄹ(arr[0]);
 arr[1] = 50;
 ㅊㄹ(arr[1]);
 // Test loop with new continue keyword
-ㅄ i = 0;
+i = 0;
 ㅂㅂ1(i < 5) {
     i = i + 1;
     ㄹㅇ(i == 2) {
